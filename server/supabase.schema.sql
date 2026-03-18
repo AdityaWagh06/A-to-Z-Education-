@@ -1,0 +1,58 @@
+-- Run this SQL in Supabase SQL Editor
+
+create extension if not exists pgcrypto;
+
+create table if not exists users (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  email text not null unique,
+  google_id text,
+  role text not null default 'student' check (role in ('student','admin')),
+  standard int,
+  progress jsonb not null default '{"maths":{"lessonsCompleted":[],"testsTaken":[]},"english":{"lessonsCompleted":[],"testsTaken":[]},"marathi":{"lessonsCompleted":[],"testsTaken":[]},"intelligence":{"lessonsCompleted":[],"testsTaken":[]}}'::jsonb,
+  purchased_tests jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists videos (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  youtube_url text not null,
+  thumbnail text,
+  subject text not null check (subject in ('maths','english','marathi','intelligence')),
+  standard int not null check (standard in (2,3,4,5)),
+  duration text,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists tests (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  subject text not null check (subject in ('maths','english','marathi','intelligence')),
+  standard int not null check (standard in (2,3,4,5)),
+  price numeric not null default 0,
+  questions jsonb not null default '[]'::jsonb,
+  time_limit int not null default 15,
+  is_locked boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists announcements (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  description text not null,
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists payments (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id) on delete cascade,
+  test_id uuid not null references tests(id) on delete cascade,
+  razorpay_order_id text not null,
+  razorpay_payment_id text,
+  amount numeric not null,
+  status text not null default 'pending' check (status in ('pending','completed','failed')),
+  created_at timestamptz not null default now()
+);
