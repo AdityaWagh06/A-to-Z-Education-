@@ -3,17 +3,15 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 const fileUpload = require('express-fileupload');
 const path = require('path');
-const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 const videoRoutes = require('./routes/videoRoutes');
 const testRoutes = require('./routes/testRoutes');
 const announcementRoutes = require('./routes/announcementRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
+const standardRoutes = require('./routes/standardRoutes');
 
 dotenv.config();
-
-connectDB();
 
 const app = express();
 
@@ -46,6 +44,7 @@ app.use('/api/tests', testRoutes);
 app.use('/api/announcements', announcementRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/standards', standardRoutes);
 
 app.get('/', (req, res) => {
     res.send('API is running...');

@@ -1,8 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
-const mongoose = require('mongoose');
-const User = require('../models/User');
-const { isSupabaseEnabled, getSupabaseAdmin } = require('../config/supabase');
+const { getSupabaseAdmin } = require('../config/supabase');
 const { getAdminEmails } = require('../utils/adminEmailStore');
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -12,8 +10,6 @@ const generateToken = (payload) => {
         expiresIn: '30d',
     });
 };
-
-const isDbConnected = () => mongoose.connection.readyState === 1;
 
 const buildProgress = () => ({
     maths: { lessonsCompleted: [], testsTaken: [] },
@@ -27,30 +23,6 @@ const getRoleForEmail = async (email) => {
     return adminEmails.includes((email || '').toLowerCase()) ? 'admin' : 'student';
 };
 
-const buildDevAuthResponse = ({ name, email, role = 'student', picture }) => {
-    const devUser = {
-        _id: `dev-${email}`,
-        name,
-        email,
-        role,
-        standard: null,
-        progress: buildProgress(),
-        purchasedTests: []
-    };
-
-    return {
-        ...devUser,
-        token: generateToken({
-            id: devUser._id,
-            role: devUser.role,
-            name: devUser.name,
-            email: devUser.email,
-            isDevMock: true
-        }),
-        picture
-    };
-};
-
 const decodeJwtPayload = (token) => {
     const parts = token.split('.');
     if (parts.length < 2) return null;
@@ -60,8 +32,11 @@ const decodeJwtPayload = (token) => {
     return JSON.parse(payloadJson);
 };
 
+// @desc    Auth user & get token
+// @route   POST /api/auth/google
+// @access  Public
 const googleLogin = async (req, res) => {
-    const { token } = req.body;
+    const { token, name: providedName, mobile } = req.body;
 
     try {
         let name;
@@ -75,7 +50,8 @@ const googleLogin = async (req, res) => {
                 audience: process.env.GOOGLE_CLIENT_ID,
             });
             const payload = ticket.getPayload();
-            name = payload.name;
+            // Use provided name if available, otherwise fallback to Google name
+            name = providedName || payload.name;
             email = payload.email;
             googleId = payload.sub;
             picture = payload.picture;
@@ -86,291 +62,143 @@ const googleLogin = async (req, res) => {
 
             const payload = decodeJwtPayload(token);
             if (!payload || !payload.email) {
-                throw verifyError;
+                // If it's a dev token but email parsing fails, return fake data
+                 return res.json({
+                    _id: 'dev-user-id',
+                    name: providedName || 'Dev User',
+                    email: 'dev@example.com',
+                    role: 'student',
+                    standard: null,
+                    progress: buildProgress(),
+                    purchasedTests: [],
+                    token: generateToken({ id: 'dev-user-id', role: 'student' }),
+                    picture: '',
+                    mobile_no: mobile || ''
+                });
             }
 
-            name = payload.name || payload.email.split('@')[0];
+            name = providedName || payload.name || payload.email.split('@')[0];
             email = payload.email;
             googleId = payload.sub || payload.email;
             picture = payload.picture;
-            console.warn('Google token verification failed, using dev bypass. Disable ALLOW_DEV_GOOGLE_BYPASS in production.');
+            console.warn('Google token verification failed, using dev bypass.');
         }
 
         const resolvedRole = await getRoleForEmail(email);
 
-        if (isSupabaseEnabled()) {
-            try {
-                const supabase = getSupabaseAdmin();
-                const { data: existing, error: findError } = await supabase
-                    .from('users')
-                    .select('*')
-                    .eq('email', email)
-                    .maybeSingle();
-                if (findError) throw findError;
+        const supabase = getSupabaseAdmin();
+        const { data: existing, error: findError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('email', email)
+            .maybeSingle();
+        
+        if (findError) throw findError;
 
-                let user = existing;
-                if (user) {
-                    const { data: updated, error: updateError } = await supabase
-                        .from('users')
-                        .update({ google_id: googleId, name, role: resolvedRole })
-                        .eq('id', user.id)
-                        .select('*')
-                        .single();
-                    if (updateError) throw updateError;
-                    user = updated;
-                } else {
-                    const { data: created, error: createError } = await supabase
-                        .from('users')
-                        .insert({
-                            name,
-                            email,
-                            google_id: googleId,
-                            role: resolvedRole,
-                            progress: buildProgress(),
-                            purchased_tests: []
-                        })
-                        .select('*')
-                        .single();
-                    if (createError) throw createError;
-                    user = created;
-                }
-
-                return res.json({
-                    _id: user.id,
-                    name: user.name,
-                    email: user.email,
-                    role: user.role || 'student',
-                    standard: user.standard,
-                    progress: user.progress || buildProgress(),
-                    purchasedTests: user.purchased_tests || [],
-                    token: generateToken({ id: user.id, role: user.role || 'student' }),
-                    picture
-                });
-            } catch (supabaseError) {
-                if (process.env.ALLOW_DEV_GOOGLE_BYPASS === 'true') {
-                    console.warn('Supabase user write failed during Google login, using dev fallback.', supabaseError.message);
-                    return res.json(buildDevAuthResponse({ name, email, picture, role: resolvedRole }));
-                }
-                throw supabaseError;
-            }
-        }
-
-        if (!isDbConnected() && process.env.ALLOW_DEV_GOOGLE_BYPASS === 'true') {
-            return res.json(buildDevAuthResponse({ name, email, picture, role: resolvedRole }));
-        }
-
-        let user = await User.findOne({ email });
-
+        let user = existing;
         if (user) {
-            user.googleId = googleId;
-            user.role = resolvedRole;
-            await user.save();
+            const updates = { google_id: googleId, role: resolvedRole, picture };
+            if (name) updates.name = name;
+            if (mobile) updates.mobile_no = mobile;
+
+            const { data: updated, error: updateError } = await supabase
+                .from('users')
+                .update(updates)
+                .eq('id', user.id)
+                .select('*')
+                .single();
+            if (updateError) throw updateError;
+            user = updated;
         } else {
-            user = await User.create({
-                name,
-                email,
-                googleId,
-                role: resolvedRole
-            });
+            const { data: created, error: createError } = await supabase
+                .from('users')
+                .insert({
+                    name,
+                    email,
+                    google_id: googleId,
+                    role: resolvedRole,
+                    progress: buildProgress(),
+                    purchased_tests: [],
+                    picture,
+                    mobile_no: mobile
+                })
+                .select('*')
+                .single();
+            if (createError) throw createError;
+            user = created;
         }
 
         return res.json({
-            _id: user._id,
+            _id: user.id,
             name: user.name,
             email: user.email,
-            role: user.role,
+            role: user.role || 'student',
             standard: user.standard,
-            progress: user.progress,
-            purchasedTests: user.purchasedTests,
-            token: generateToken({ id: user._id, role: user.role }),
-            picture
+            progress: user.progress || buildProgress(),
+            purchasedTests: user.purchased_tests || [],
+            token: generateToken({ id: user.id, role: user.role || 'student' }),
+            picture: picture || user.picture,
+            mobile_no: user.mobile_no
         });
+
     } catch (error) {
-        console.error(error);
-        return res.status(401).json({ message: 'Google Auth Failed' });
+        console.error('Auth Error Details:', error);
+        res.status(401).json({ message: `Google Auth Failed: ${error.message || JSON.stringify(error)}` });
     }
 };
 
+// @desc    Get user profile
+// @route   GET /api/auth/profile
+// @access  Private
 const getUserProfile = async (req, res) => {
-    if (req.user?.isDevMock) {
-        return res.json({
-            _id: req.user._id,
+    if (req.user) {
+        res.json({
+            _id: req.user.id,
             name: req.user.name,
             email: req.user.email,
-            role: req.user.role,
-            standard: null,
-            progress: req.user.progress || buildProgress(),
-            purchasedTests: req.user.purchasedTests || []
-        });
-    }
-
-    if (isSupabaseEnabled()) {
-        return res.json({
-            _id: req.user._id,
-            name: req.user.name,
-            email: req.user.email,
-            role: req.user.role,
+            role: req.user.role || 'student',
             standard: req.user.standard,
             progress: req.user.progress || buildProgress(),
-            purchasedTests: req.user.purchasedTests || []
+            purchasedTests: req.user.purchased_tests || [],
+            picture: req.user.picture,
+            mobile_no: req.user.mobile_no
         });
+    } else {
+        res.status(404).json({ message: 'User not found' });
     }
-
-    const user = await User.findById(req.user._id);
-    if (user) {
-        return res.json({
-            _id: user._id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            standard: user.standard,
-            progress: user.progress,
-            purchasedTests: user.purchasedTests
-        });
-    }
-
-    return res.status(404).json({ message: 'User not found' });
 };
 
+// @desc    Update user profile
+// @route   PUT /api/auth/profile
+// @access  Private
 const updateUserProfile = async (req, res) => {
-    if (req.user?.isDevMock) {
-        return res.json({
-            _id: req.user._id,
+    const supabase = getSupabaseAdmin();
+    const { data: updated, error } = await supabase
+        .from('users')
+        .update({
             name: req.body.name || req.user.name,
-            email: req.user.email,
-            role: req.user.role,
-            standard: req.body.standard || null,
-            token: generateToken({
-                id: req.user._id,
-                role: req.user.role,
-                name: req.body.name || req.user.name,
-                email: req.user.email,
-                isDevMock: true
-            }),
-        });
+            standard: req.body.standard || req.user.standard
+        })
+        .eq('id', req.user.id)
+        .select('*')
+        .single();
+
+    if (error || !updated) {
+        return res.status(404).json({ message: 'User update failed' });
     }
 
-    if (isSupabaseEnabled()) {
-        const supabase = getSupabaseAdmin();
-        const { data: updated, error } = await supabase
-            .from('users')
-            .update({
-                name: req.body.name || req.user.name,
-                standard: req.body.standard || req.user.standard
-            })
-            .eq('id', req.user._id)
-            .select('*')
-            .single();
-
-        if (error || !updated) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-
-        return res.json({
-            _id: updated.id,
-            name: updated.name,
-            email: updated.email,
-            role: updated.role || 'student',
-            standard: updated.standard,
-            token: generateToken({ id: updated.id, role: updated.role || 'student' }),
-        });
-    }
-
-    const user = await User.findById(req.user._id);
-
-    if (user) {
-        user.name = req.body.name || user.name;
-        if (req.body.standard) {
-            user.standard = req.body.standard;
-        }
-
-        const updatedUser = await user.save();
-
-        return res.json({
-            _id: updatedUser._id,
-            name: updatedUser.name,
-            email: updatedUser.email,
-            role: updatedUser.role,
-            standard: updatedUser.standard,
-            token: generateToken({ id: updatedUser._id, role: updatedUser.role }),
-        });
-    }
-
-    return res.status(404).json({ message: 'User not found' });
-};
-
-const devLogin = async (req, res) => {
-    if (process.env.ALLOW_DEV_GOOGLE_BYPASS !== 'true') {
-        return res.status(403).json({ message: 'Dev login is disabled' });
-    }
-
-    const name = req.body.name || 'Demo Student';
-    const email = req.body.email || 'demo.student@atoz.local';
-
-    if (isSupabaseEnabled()) {
-        try {
-            const supabase = getSupabaseAdmin();
-            const { data: existing, error: findError } = await supabase
-                .from('users')
-                .select('*')
-                .eq('email', email)
-                .maybeSingle();
-            if (findError) throw findError;
-
-            let user = existing;
-            if (!user) {
-                const { data: created, error: createError } = await supabase
-                    .from('users')
-                    .insert({
-                        name,
-                        email,
-                        google_id: `dev-${Date.now()}`,
-                        role: 'student',
-                        progress: buildProgress(),
-                        purchased_tests: []
-                    })
-                    .select('*')
-                    .single();
-                if (createError) throw createError;
-                user = created;
-            }
-
-            return res.json({
-                _id: user.id,
-                name: user.name,
-                email: user.email,
-                role: user.role || 'student',
-                standard: user.standard,
-                token: generateToken({ id: user.id, role: user.role || 'student' })
-            });
-        } catch (supabaseError) {
-            console.warn('Supabase dev login failed, using fallback token.', supabaseError.message);
-            return res.json(buildDevAuthResponse({ name, email }));
-        }
-    }
-
-    if (!isDbConnected()) {
-        return res.json(buildDevAuthResponse({ name, email }));
-    }
-
-    let user = await User.findOne({ email });
-    if (!user) {
-        user = await User.create({
-            name,
-            email,
-            googleId: `dev-${Date.now()}`,
-            role: 'student'
-        });
-    }
-
-    return res.json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        standard: user.standard,
-        token: generateToken({ id: user._id, role: user.role })
+    res.json({
+        _id: updated.id,
+        name: updated.name,
+        email: updated.email,
+        role: updated.role || 'student',
+        standard: updated.standard,
+        token: generateToken({ id: updated.id, role: updated.role || 'student' }),
     });
 };
 
-module.exports = { googleLogin, getUserProfile, updateUserProfile, devLogin };
+module.exports = {
+    googleLogin,
+    getUserProfile,
+    updateUserProfile
+};

@@ -1,30 +1,36 @@
 # 🎓 A to Z Education Platform
 
 ![Status](https://img.shields.io/badge/Status-Active-success)
-![MERN Stack](https://img.shields.io/badge/Stack-MERN-blue)
+![Stack](https://img.shields.io/badge/Stack-React%20%2B%20Supabase-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-A comprehensive Full-Stack EdTech solution designed to provide seamless learning experiences for students from Standards 2 to 10. Built with the MERN stack (MongoDB, Express, React, Node.js), this platform offers robust features for both students and administrators.
+A comprehensive Full-Stack EdTech solution designed to provide seamless learning experiences for students. Built with React (Vite) and Supabase (PostgreSQL), this platform offers robust features for both students and administrators.
 
 ---
 
 ## 🚀 Key Features
 
 ### 👨‍🎓 For Students
-*   **Smart Dashboard**: Personalized welcome screen with quick access to current standard and subjects.
-*   **Video Lessons**: Integrated YouTube player for distraction-free learning across Maths, English, Marathi, and Intelligence.
+*   **Smart Dashboard (Updated)**:
+    *   **Dynamic Class Selection**: Students can select their standard/class dynamically.
+    *   **Subject Access**: Quick access to subjects based on selected class.
+*   **Video Lessons (New Player)**:
+    *   **Distraction-Free**: Custom player wrapper prevents external YouTube navigation.
+    *   **Optimized UI**: Resized player with integrated "Previous" and "Next" lesson navigation.
+    *   **Progress Tracking**: Sidebar indicates currently playing video.
 *   **Test Center**: 
     *   Take practice tests and view results instantly.
     *   **Interactive PDF Viewer**: Built-in secure PDF viewer for question papers.
     *   **Answer Keys**: Access detailed solutions after submission.
-*   **Progress Tracking**: Visual indicators of learning progress.
 
 ### 👩‍🏫 For Administrators
-*   **Admin Dashboard**: comprehensive control panel to manage the platform.
+*   **Admin Dashboard**: Comprehensive control panel to manage the platform.
+*   **New: Manage Classes**:
+    *   Add or remove standards/classes dynamically.
+    *   Classes appear instantly on student dashboards.
 *   **Content Management**:
     *   Upload and manage Video Lessons.
     *   **Test Upload System**: Drag-and-drop interface for uploading Question Papers (PDF) and Answer Keys.
-    *   **Dual Storage Reliability**: Automatic fallback to local JSON storage if the database is unavailable, ensuring 100% uptime for critical uploads.
 *   **Access Control**: Secure email-based whitelist for admin privileges.
 
 ---
@@ -33,10 +39,10 @@ A comprehensive Full-Stack EdTech solution designed to provide seamless learning
 
 *   **Frontend**: React (Vite), Tailwind CSS, Lucide React (Icons), Axios
 *   **Backend**: Node.js, Express.js
-*   **Database**: MongoDB (Primary) + JSON File System (Fallback/Redundancy)
-*   **Storage**: Local file upload handling with `express-fileupload`
-*   **Authentication**: Google OAuth 2.0 via `@react-oauth/google`
-*   **Payments**: Razorpay Integration (Ready)
+*   **Database**: Supabase (PostgreSQL) - Replaces MongoDB
+*   **Storage**: Supabase Storage / Local Uploads
+*   **Authentication**: Google OAuth 2.0 / Supabase Auth
+*   **Payments**: Razorpay Integration
 
 ---
 
@@ -44,13 +50,14 @@ A comprehensive Full-Stack EdTech solution designed to provide seamless learning
 
 ### Prerequisites
 *   Node.js (v14+)
-*   MongoDB (Local or Atlas)
+*   Supabase Account
 
-### 1. Clone the Repository
-```bash
-git clone https://github.com/AdityaWagh06/A-to-Z-Education-.git
-cd A-to-Z-Education-
-```
+### 1. Database Setup (Supabase)
+This project requires a Supabase instance.
+1.  Create a new project on Supabase.
+2.  Go to the **SQL Editor** in your Supabase dashboard.
+3.  Run the contents of `server/db_setup.sql`.
+4.  **Important**: Run the contents of `server/setup_standards.sql` to enable the Class Management features.
 
 ### 2. Backend Configuration
 Navigate to the server folder and install dependencies:
@@ -62,10 +69,9 @@ npm install
 Create a `.env` file in the `server/` directory:
 ```env
 PORT=5000
-MONGO_URI=your_mongodb_connection_string
-JWT_SECRET=your_jwt_secret
-GOOGLE_CLIENT_ID=your_google_client_id
-CLIENT_ORIGIN=http://localhost:5173
+SUPABASE_URL=your_supabase_url
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+# ... other vars
 ```
 
 Start the backend server:
@@ -81,17 +87,18 @@ cd ../client
 npm install
 ```
 
-Create a `.env` file in the `client/` directory (optional, or rely on defaults):
-```env
-VITE_API_URL=http://localhost:5000
-VITE_GOOGLE_CLIENT_ID=your_google_client_id
-```
-
 Start the frontend application:
 ```bash
 npm run dev
 # App runs on http://localhost:5173
 ```
+
+---
+
+## ⚠️ Known Issues / Pending
+
+*   **Database Migration**: The `server/setup_standards.sql` script must be run manually in Supabase to create the `standards` table. If not run, "Add Class" will fail.
+*   **Subject Management**: Currently, subjects (Maths, English, etc.) are hardcoded in the frontend. Future update will move this to the database.
 
 ---
 

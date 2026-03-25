@@ -1,13 +1,11 @@
 const { createClient } = require('@supabase/supabase-js');
 
-const isSupabaseEnabled = () => {
-    return process.env.USE_SUPABASE === 'true' &&
-        Boolean(process.env.SUPABASE_URL) &&
-        Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
-};
+const isSupabaseEnabled = () => true;
 
 const getSupabaseAdmin = () => {
-    if (!isSupabaseEnabled()) return null;
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        throw new Error('Missing Supabase credentials in .env');
+    }
 
     return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
         auth: {

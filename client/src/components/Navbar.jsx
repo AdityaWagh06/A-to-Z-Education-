@@ -65,6 +65,19 @@ const Navbar = () => {
                                         <p className="text-sm font-bold text-gray-800 leading-none">{user?.name}</p>
                                         <p className="text-xs text-gray-500 uppercase">{user?.role}</p>
                                     </div>
+                                    
+                                    {user?.picture ? (
+                                        <img 
+                                            src={user.picture} 
+                                            alt={user.name} 
+                                            className="h-10 w-10 rounded-full object-cover border border-gray-200"
+                                        />
+                                    ) : (
+                                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold border border-primary/20">
+                                            {user?.name?.charAt(0)?.toUpperCase()}
+                                        </div>
+                                    )}
+
                                     <button 
                                         onClick={handleLogout} 
                                         className="bg-red-50 text-red-600 hover:bg-red-100 px-3 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2"

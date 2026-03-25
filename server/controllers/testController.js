@@ -1,26 +1,6 @@
-const fs = require('fs');
 const path = require('path');
-const mongoose = require('mongoose');
-const Test = require('../models/Test');
-const Payment = require('../models/Payment'); 
-const { isSupabaseEnabled, getSupabaseAdmin } = require('../config/supabase');
-
-const TESTS_FILE = path.join(__dirname, '../data/tests.json');
-
-// Helper to read/write file-based tests
-const getFileTests = () => {
-    if (!fs.existsSync(TESTS_FILE)) return [];
-    try {
-        return JSON.parse(fs.readFileSync(TESTS_FILE, 'utf8'));
-    } catch (err) {
-        console.error('Error reading tests.json:', err);
-        return [];
-    }
-};
-
-const saveFileTests = (tests) => {
-    fs.writeFileSync(TESTS_FILE, JSON.stringify(tests, null, 2));
-};
+const fs = require('fs');
+const { getSupabaseAdmin } = require('../config/supabase');
 
 // @desc    Get all tests
 // @route   GET /api/tests
@@ -28,66 +8,28 @@ const saveFileTests = (tests) => {
 const getTests = async (req, res) => {
     const { standard, subject } = req.query;
     try {
-        if (isSupabaseEnabled()) {
-            const supabase = getSupabaseAdmin();
-            let query = supabase.from('tests').select('*').order('created_at', { ascending: false });
-            if (standard) query = query.eq('standard', Number(standard));
-            if (subject) query = query.eq('subject', subject);
-            const { data, error } = await query;
-            if (error) throw error;
+        const supabase = getSupabaseAdmin();
+        let query = supabase.from('tests').select('*').order('created_at', { ascending: false });
 
-            return res.json((data || []).map((t) => ({
-                _id: t.id,
-                title: t.title,
-                subject: t.subject,
-                standard: t.standard,
-                price: t.price,
-                pdfUrl: t.pdf_path,
-                answerSheetUrl: t.answer_sheet_path,
-                questions: t.questions || [],
-                timeLimit: t.time_limit,
-                isLocked: t.is_locked,
-                createdAt: t.created_at
-            })));
-        }
+        if (standard) query = query.eq('standard', Number(standard));
+        if (subject) query = query.eq('subject', subject);
 
-        // Get file-based tests first (always available as fallback/supplement)
-        let fileTests = getFileTests();
-        if (standard) fileTests = fileTests.filter(t => t.standard === Number(standard));
-        if (subject) fileTests = fileTests.filter(t => t.subject === subject);
-        
-        fileTests = fileTests.map((t) => ({
-            ...t,
-            pdfUrl: t.pdfPath ? `${req.protocol}://${req.get('host')}${t.pdfPath}` : null,
-            answerSheetUrl: t.answerSheetPath ? `${req.protocol}://${req.get('host')}${t.answerSheetPath}` : null
-        }));
+        const { data, error } = await query;
+        if (error) throw error;
 
-        let mongoTests = [];
-        try {
-            if (mongoose.connection.readyState === 1) {
-                const query = {};
-                if (standard) query.standard = Number(standard);
-                if (subject) query.subject = subject;
-                const mTests = await Test.find(query).sort({ createdAt: -1 });
-                
-                mongoTests = mTests.map((t) => {
-                    const testObj = t.toObject ? t.toObject() : t;
-                    return {
-                        ...testObj,
-                        pdfUrl: testObj.pdfPath ? `${req.protocol}://${req.get('host')}${testObj.pdfPath}` : null,
-                        answerSheetUrl: testObj.answerSheetPath ? `${req.protocol}://${req.get('host')}${testObj.answerSheetPath}` : null
-                    };
-                });
-            }
-        } catch (dbError) {
-            console.warn('Database unavailable, using only file-based tests:', dbError.message);
-        }
-
-        // Merge tests (prefer file tests for simplicity if duplicates exist, but IDs are unique)
-        // Sort by creation date descending
-        const allTests = [...fileTests, ...mongoTests].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        
-        return res.json(allTests);
+        return res.json((data || []).map((t) => ({
+            _id: t.id,
+            title: t.title,
+            subject: t.subject,
+            standard: t.standard,
+            price: t.price,
+            pdfUrl: t.pdf_path ? `${req.protocol}://${req.get('host')}${t.pdf_path}` : null,
+            answerSheetUrl: t.answer_sheet_path ? `${req.protocol}://${req.get('host')}${t.answer_sheet_path}` : null,
+            questions: t.questions || [],
+            timeLimit: t.time_limit,
+            isLocked: t.is_locked,
+            createdAt: t.created_at
+        })));
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -98,149 +40,190 @@ const getTests = async (req, res) => {
 // @access  Protected
 const getTestById = async (req, res) => {
     try {
-        if (isSupabaseEnabled()) {
-             const supabase = getSupabaseAdmin();
-            const { data: test, error } = await supabase.from('tests').select('*').eq('id', req.params.id).single();
-             if (error || !test) return res.status(404).json({ message: 'Test not found' });
-             return res.json(test);
-        }
+        const supabase = getSupabaseAdmin();
+        const { data: test, error } = await supabase
+            .from('tests')
+            .select('*')
+            .eq('id', req.params.id)
+            .single();
 
-        let test = null;
-        try {
-             if (mongoose.connection.readyState === 1) {
-                 // Try to find in MongoDB
-                 // Validate ID format for Mongo first
-                 if (mongoose.Types.ObjectId.isValid(req.params.id)) {
-                    test = await Test.findById(req.params.id);
-                 }
-             }
-        } catch (err) {
-            console.warn('Error fetching from DB, checking file store:', err.message);
-        }
+        if (error || !test) return res.status(404).json({ message: 'Test not found' });
 
-        if (!test) {
-            // Check file store
-            const tests = getFileTests();
-            test = tests.find(t => t._id === req.params.id);
-        }
-
-        if (test) {
-            // Convert to object if mongoose doc
-            const testObj = test.toObject ? test.toObject() : test;
+        // Check if locked and unpaid
+        if (test.is_locked && Number(test.price) > 0) {
+            // Check if user purchased
+             const { data: user } = await supabase
+                .from('users')
+                .select('purchased_tests')
+                .eq('id', req.user._id) // user.id from auth middleware
+                .single();
             
-            // Add URLs
-            const testWithUrls = {
-                ...testObj,
-                pdfUrl: testObj.pdfPath ? `${req.protocol}://${req.get('host')}${testObj.pdfPath}` : null,
-                answerSheetUrl: testObj.answerSheetPath ? `${req.protocol}://${req.get('host')}${testObj.answerSheetPath}` : null
-            };
-
-            res.json(testWithUrls);
-        } else {
-            res.status(404).json({ message: 'Test not found' });
+            const purchased = (user?.purchased_tests || []).includes(test.id);
+            if (!purchased && req.user.role !== 'admin') {
+                return res.status(403).json({ message: 'Test is locked. Purchase required.' });
+            }
         }
+
+        res.json({
+            ...test,
+            pdfUrl: test.pdf_path ? `${req.protocol}://${req.get('host')}${test.pdf_path}` : null,
+            answerSheetUrl: test.answer_sheet_path ? `${req.protocol}://${req.get('host')}${test.answer_sheet_path}` : null,
+        });
+
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 };
 
-// @desc    Create a test
+// @desc    Add a test (PDF Upload)
 // @route   POST /api/tests
 // @access  Admin
 const createTest = async (req, res) => {
     try {
-        console.log("createTest Request Body:", req.body);
+        if (!req.files || !req.files.pdf) {
+            return res.status(400).json({ message: 'No PDF file uploaded' });
+        }
+
         const { title, subject, standard, price, isLocked } = req.body;
-        let pdfPath = null;
-        let answerSheetPath = null;
+        const pdfFile = req.files.pdf;
+        const answerSheetFile = req.files.answerSheet;
 
-        if (req.files) {
-            if (req.files.pdf) {
-                const pdfFile = req.files.pdf;
-                const pdfName = `test-${Date.now()}-${pdfFile.name}`;
-                const uploadDir = path.join(__dirname, '..', 'uploads', 'tests');
-                const uploadPath = path.join(uploadDir, pdfName);
-                await pdfFile.mv(uploadPath);
-                pdfPath = `/uploads/tests/${pdfName}`;
-            }
-            if (req.files.answerSheet) {
-                const sheetFile = req.files.answerSheet;
-                const sheetName = `answers-${Date.now()}-${sheetFile.name}`;
-                const uploadDir = path.join(__dirname, '..', 'uploads', 'tests');
-                const uploadPath = path.join(uploadDir, sheetName);
-                await sheetFile.mv(uploadPath);
-                answerSheetPath = `/uploads/tests/${sheetName}`;
-            }
+        // Save PDF locally
+        const pdfName = `test-${Date.now()}-${pdfFile.name}`;
+        const pdfPath = path.join(__dirname, '../uploads/tests', pdfName);
+        
+        // Ensure directory exists
+        const uploadDir = path.join(__dirname, '../uploads/tests');
+        if (!fs.existsSync(uploadDir)){
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        
+        await pdfFile.mv(pdfPath);
+        const relativePdfPath = `/uploads/tests/${pdfName}`;
+
+        let relativeAnswerSheetPath = null;
+        if (answerSheetFile) {
+            const answerName = `answers-${Date.now()}-${answerSheetFile.name}`;
+            const answerPath = path.join(__dirname, '../uploads/tests', answerName);
+            await answerSheetFile.mv(answerPath);
+            relativeAnswerSheetPath = `/uploads/tests/${answerName}`;
         }
 
-        const isLockedBool = String(isLocked) === 'true';
-        const newTestObj = {
-            title,
-            subject,
-            standard: Number(standard), // Ensure number
-            price: Number(price || 0),
-            isLocked: isLockedBool,
-            pdfPath,
-            answerSheetPath,
-            questions: [],
-            createdAt: new Date(),
-            updatedAt: new Date()
-        };
+        const supabase = getSupabaseAdmin();
+        const { data, error } = await supabase
+            .from('tests')
+            .insert([{
+                title,
+                subject,
+                standard: Number(standard),
+                price: Number(price) || 0,
+                is_locked: isLocked === 'true' || isLocked === true,
+                pdf_path: relativePdfPath,
+                answer_sheet_path: relativeAnswerSheetPath,
+                questions: [] // Default empty for PDF tests
+            }])
+            .select('*')
+            .single();
 
-        try {
-            if (mongoose.connection.readyState === 1) {
-                const test = new Test(newTestObj);
-                const createdTest = await test.save();
-                return res.status(201).json(createdTest);
-            } else {
-                throw new Error('MongoDB not connected');
-            }
-        } catch (dbError) {
-             console.warn('Database unavailable, saving to file:', dbError.message);
-             const tests = getFileTests();
-             const newTest = { ...newTestObj, _id: String(Date.now()) }; // Generate simple ID
-             tests.push(newTest);
-             saveFileTests(tests);
-             return res.status(201).json(newTest);
-        }
+        if (error) throw error;
+
+        res.status(201).json(data);
     } catch (error) {
         console.error(error);
-        res.status(400).json({ message: error.message });
+        res.status(500).json({ message: error.message });
     }
 };
 
-// @desc    Submit test answers
+// @desc    Submit a test result (Update Progress)
 // @route   POST /api/tests/:id/submit
 // @access  Protected
 const submitTest = async (req, res) => {
-    const { answers } = req.body; 
+    const { score, totalQuestions } = req.body;
+    try {
+        const supabase = getSupabaseAdmin();
+        
+        // 1. Get Test Details (for Subject)
+        const { data: test, error: testError } = await supabase
+            .from('tests')
+            .select('subject')
+            .eq('id', req.params.id)
+            .single();
 
-    const findTest = async () => {
-         if (mongoose.connection.readyState === 1) {
-             return await Test.findById(req.params.id);
-         }
-         const tests = getFileTests();
-         return tests.find(t => t._id === req.params.id);
-    };
+        if (testError || !test) return res.status(404).json({ message: 'Test not found' });
 
-    const test = await findTest();
+        // 2. Get User Progress
+        const { data: user, error: userError } = await supabase
+            .from('users')
+            .select('progress')
+            .eq('id', req.user._id)
+            .single();
 
-    if (!test) {
-        return res.status(404).json({ message: 'Test not found' });
-    }
+        if (userError) throw userError;
 
-    // For PDF tests, there are no interactive questions to score automatically usually,
-    // but if backward compatibility is kept:
-    let score = 0;
-    if (test.questions && test.questions.length > 0) {
-        test.questions.forEach((q, index) => {
-            if (answers[index] === q.correctAnswer) {
-                score++;
-            }
+        const progress = user.progress || {};
+        const subject = test.subject.toLowerCase(); // Ensure lowercase key
+        
+        if (!progress[subject]) {
+            progress[subject] = { lessonsCompleted: [], testsTaken: [] };
+        }
+
+        // Add result
+        progress[subject].testsTaken.push({
+            testId: req.params.id,
+            score: Number(score),
+            totalQuestions: Number(totalQuestions),
+            date: new Date().toISOString()
         });
-    }
 
-    res.json({ score, total: (test.questions || []).length });
+        // 3. Update User
+        const { error: updateError } = await supabase
+            .from('users')
+            .update({ progress })
+            .eq('id', req.user._id);
+
+        if (updateError) throw updateError;
+
+        res.json({ message: 'Test submitted successfully', progress });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: error.message });
+    }
 };
 
-module.exports = { getTests, getTestById, createTest, submitTest };
+const deleteTest = async (req, res) => {
+    try {
+        const supabase = getSupabaseAdmin();
+        const { error } = await supabase.from('tests').delete().eq('id', req.params.id);
+        if (error) throw error;
+        res.json({ message: 'Test deleted' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+const updateTest = async (req, res) => {
+    try {
+        const { title, subject, standard, price, isLocked } = req.body;
+        const supabase = getSupabaseAdmin();
+        const { data, error } = await supabase
+            .from('tests')
+            .update({
+                title,
+                subject,
+                standard: Number(standard),
+                price: Number(price) || 0,
+                is_locked: isLocked === 'true' || isLocked === true
+            })
+            .eq('id', req.params.id)
+            .select('*')
+            .single();
+
+        if (error) throw error;
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+module.exports = { getTests, getTestById, createTest, submitTest, deleteTest, updateTest };

@@ -1,105 +1,175 @@
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, Bell, ChevronRight } from 'lucide-react';
+import axios from 'axios';
 
 const StudentHome = () => {
     const { user, updateStandard } = useAuth();
+    const [announcements, setAnnouncements] = useState([]);
+    const [standards, setStandards] = useState([]);
     
-    // Static data with gradients to look vibrant
+    // Static subjects data (could be moved to DB later)
     const subjects = [
-        { name: 'Maths', gradient: 'from-blue-400 to-blue-600', icon: <BookOpen />, progress: 45 },
-        { name: 'English', gradient: 'from-pink-400 to-pink-600', icon: <BookOpen />, progress: 20 },
-        { name: 'Marathi', gradient: 'from-green-400 to-green-600', icon: <BookOpen />, progress: 60 },
-        { name: 'Intelligence', gradient: 'from-purple-400 to-purple-600', icon: <BookOpen />, progress: 10 },
+        { name: 'Maths', gradient: 'from-blue-500 to-blue-600', icon: <BookOpen className="w-6 h-6" /> },
+        { name: 'English', gradient: 'from-pink-500 to-pink-600', icon: <BookOpen className="w-6 h-6" /> },
+        { name: 'Marathi', gradient: 'from-green-500 to-green-600', icon: <BookOpen className="w-6 h-6" /> },
+        { name: 'Intelligence', gradient: 'from-purple-500 to-purple-600', icon: <BookOpen className="w-6 h-6" /> },
     ];
 
-    const handleStandardSelect = async (std) => {
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const [annRes, stdRes] = await Promise.all([
+                    axios.get('http://localhost:5000/api/announcements'),
+                    axios.get('http://localhost:5000/api/standards')
+                ]);
+                setAnnouncements(annRes.data);
+                
+                let loadedStandards = stdRes.data;
+                if (!loadedStandards || loadedStandards.length === 0) {
+                     // Fallback standards if DB is empty
+                     loadedStandards = [
+                        { id: 'def1', value: 1, label: 'Class 1' },
+                        { id: 'def2', value: 2, label: 'Class 2' },
+                        { id: 'def3', value: 3, label: 'Class 3' },
+                        { id: 'def4', value: 4, label: 'Class 4' },
+                        { id: 'def5', value: 5, label: 'Class 5' },
+                        { id: 'def6', value: 6, label: 'Class 6' },
+                        { id: 'def7', value: 7, label: 'Class 7' },
+                     ];
+                }
+                
+                const sortedStandards = loadedStandards.sort((a, b) => a.value - b.value);
+                setStandards(sortedStandards);
+            } catch (err) {
+                console.error("Failed to fetch data", err);
+            }
+        };
+        fetchData();
+    }, []);
+
+    const handleStandardSelect = async (stdValue) => {
         try {
-            await updateStandard(std);
+            await updateStandard(stdValue);
         } catch (err) {
             console.error(err);
         }
     };
 
-    if (!user?.standard) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
-                <h1 className="text-3xl md:text-5xl font-extrabold text-gray-900 mb-4 text-center">
-                    Welcome, <span className="text-primary">{user?.name}</span>! 👋
-                </h1>
-                <p className="text-xl text-gray-600 mb-12 text-center">Select your standard to get started</p>
-                
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6 w-full max-w-6xl">
-                    {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((std) => (
-                        <button 
-                            key={std}
-                            onClick={() => handleStandardSelect(std)}
-                            className="group bg-white hover:bg-indigo-600 border-2 border-gray-100 hover:border-indigo-600 p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 flex flex-col items-center justify-center aspect-square"
-                        >
-                            <span className="text-7xl font-black text-gray-800 group-hover:text-white mb-2 transition-colors">{std}</span>
-                            <span className="text-lg text-gray-500 group-hover:text-indigo-100 font-bold uppercase tracking-wider transition-colors">Standard</span>
-                        </button>
-                    ))}
-                </div>
-            </div>
-        );
-    }
-
     return (
-        <div className="min-h-screen bg-background pb-12">
-            {/* Header / Welcome Banner */}
-            <div className="bg-gradient-to-r from-primary to-indigo-600 text-white p-8 md:p-12 mb-12 shadow-lg">
-                <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
-                    <div>
-                        <h1 className="text-3xl md:text-5xl font-extrabold mb-2">
-                            Standard {user?.standard}
-                        </h1>
-                        <p className="text-lg opacity-90 font-medium">
-                            Let's learn something new today! 🚀
-                        </p>
+        <div className="min-h-screen bg-gray-50 pb-12">
+            {/* Header */}
+            <div className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-20">
+                 <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+                    <h1 className="text-xl font-bold text-gray-800">
+                        Welcome, <span className="text-primary">{user?.name}</span>! 👋
+                    </h1>
+                     {user?.standard && (
+                        <div className="text-sm font-medium px-3 py-1 bg-blue-50 text-blue-700 rounded-full border border-blue-100">
+                            Class {user.standard}
+                        </div>
+                    )}
+                 </div>
+            </div>
+
+            <div className="max-w-7xl mx-auto px-6 mt-8 space-y-10">
+                
+                {/* 1. Announcements Section */}
+                <section>
+                    <div className="flex items-center gap-2 mb-4">
+                        <Bell className="w-5 h-5 text-primary" />
+                        <h2 className="text-lg font-bold text-gray-800">Notifications</h2>
                     </div>
                     
-                    <div className="flex items-center gap-4 bg-white/10 p-2 pr-6 rounded-full backpack-blur-sm border border-white/20">
-                        <span className="bg-white text-primary font-bold w-10 h-10 flex items-center justify-center rounded-full text-lg">
-                            {user?.standard}
-                        </span>
-                        <div className="flex flex-col">
-                            <span className="text-xs uppercase tracking-wide opacity-80">Current Class</span>
-                            <button 
-                                onClick={() => updateStandard(null)}
-                                className="text-sm font-bold hover:text-yellow-300 transition text-left"
-                            >
-                                Change
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div className="max-w-7xl mx-auto px-6">
-                {/* Subjects Grid */}
-                <h2 className="text-3xl font-bold text-gray-800 mb-8 flex items-center gap-3">
-                    <BookOpen className="text-primary h-8 w-8" /> Select a Subject
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
-                    {subjects.map((sub) => (
-                        <Link to={`/student/lessons/${sub.name.toLowerCase()}?standard=${user?.standard || ''}`} key={sub.name} className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 transform hover:-translate-y-2">
-                             <div className={`h-32 bg-gradient-to-br ${sub.gradient} flex items-center justify-center relative`}>
-                                <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors"></div>
-                                <div className="bg-white/25 p-5 rounded-2xl text-white backdrop-blur-md shadow-inner transform group-hover:scale-110 transition-transform duration-300">
-                                    {sub.icon}
+                    {announcements.length > 0 ? (
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            {announcements.map((ann) => (
+                                <div key={ann._id || ann.id} className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+                                     <div className="absolute top-0 left-0 w-1 h-full bg-primary"></div>
+                                     <h3 className="font-bold text-gray-900 mb-1">{ann.title}</h3>
+                                     <p className="text-sm text-gray-600 line-clamp-2">{ann.description}</p>
+                                     <span className="text-xs text-gray-400 mt-3 block">{new Date(ann.created_at).toLocaleDateString()}</span>
                                 </div>
-                            </div>
-                            <div className="p-6">
-                                <h3 className="text-2xl font-bold text-gray-800 mb-2 group-hover:text-primary transition-colors">{sub.name}</h3>
-                                <p className="text-gray-500 text-sm font-medium">View Lessons & Tests →</p>
-                            </div>
-                        </Link>
-                    ))}
-                </div>
+                            ))}
+                        </div>
+                    ) : (
+                         <div className="bg-white p-6 rounded-xl border border-dashed border-gray-300 text-center text-gray-500 text-sm">
+                            No new notifications at the moment.
+                         </div>
+                    )}
+                </section>
+
+                {/* 2. Classes (Standards) Section */}
+                <section>
+                    <h2 className="text-lg font-bold text-gray-800 mb-4">Classes</h2>
+                    <div className="flex flex-wrap gap-3">
+                        {standards.length > 0 ? standards.map((std) => {
+                            const isActive = user?.standard === std.value;
+                            return (
+                                <button 
+                                    key={std.id}
+                                    onClick={() => handleStandardSelect(std.value)}
+                                    className={`
+                                        group relative overflow-hidden px-6 py-3 rounded-lg font-bold text-sm transition-all duration-200 border
+                                        ${isActive 
+                                            ? 'bg-primary text-white border-primary shadow-lg scale-105' 
+                                            : 'bg-white text-gray-600 border-gray-200 hover:border-primary hover:text-primary hover:shadow-md'}
+                                    `}
+                                >
+                                    {std.label || std.value}
+                                </button>
+                            );
+                        }) : (
+                             // Fallback if no standards in DB yet
+                             <div className="text-sm text-gray-500 italic">Loading classes...</div>
+                        )}
+                    </div>
+                </section>
+
+                {/* 3. Subjects Grid (Only if Standard is Selected) */}
+                {user?.standard && (
+                    <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                                <BookOpen className="w-6 h-6 text-primary" /> 
+                                Your Subjects 
+                                <span className="text-sm font-normal text-gray-500 ml-2">(Class {user.standard})</span>
+                            </h2>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                            {subjects.map((sub) => (
+                                <Link 
+                                    to={`/student/lessons/${sub.name.toLowerCase()}?standard=${user.standard}`} 
+                                    key={sub.name} 
+                                    className="group bg-white rounded-2xl shadow-sm hover:shadow-xl border border-gray-100 transition-all duration-300 overflow-hidden transform hover:-translate-y-1 block"
+                                >
+                                    <div className={`h-24 bg-gradient-to-r ${sub.gradient} flex items-center justify-center`}>
+                                        <div className="bg-white/20 p-3 rounded-full text-white backdrop-blur-sm shadow-inner group-hover:scale-110 transition-transform">
+                                            {sub.icon}
+                                        </div>
+                                    </div>
+                                    <div className="p-5">
+                                        <h3 className="text-lg font-bold text-gray-800 mb-1">{sub.name}</h3>
+                                        <div className="flex items-center text-primary text-sm font-medium group-hover:underline">
+                                            Start Learning <ChevronRight className="w-4 h-4 ml-1" />
+                                        </div>
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    </section>
+                )}
+
+                {!user?.standard && standards.length > 0 && (
+                    <div className="text-center py-12">
+                        <p className="text-gray-500 mb-4">Please select your class from the list above to view subjects.</p>
+                    </div>
+                )}
                 
-                <div className="flex justify-center mt-12">
-                    <Link to="/student/profile" className="text-gray-500 hover:text-primary font-bold text-sm flex items-center gap-2 px-6 py-3 rounded-full hover:bg-gray-100 transition">
+                <div className="flex justify-center mt-12 pb-8">
+                     <Link to="/student/profile" className="text-gray-500 hover:text-primary font-bold text-sm flex items-center gap-2 px-6 py-3 rounded-full hover:bg-white border border-transparent hover:border-gray-200 transition shadow-sm hover:shadow-md">
                          View Your Progress Report
                     </Link>
                 </div>

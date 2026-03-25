@@ -11,13 +11,11 @@ const getAdminEmailSettings = async (_req, res) => {
 
 const updateAdminEmailSettings = async (req, res) => {
     const { emails } = req.body;
-
     if (!Array.isArray(emails)) {
         return res.status(400).json({ message: 'emails must be an array' });
     }
-
     try {
-        const updated = await writeStoredAdminEmails(emails);
+        const updated = await writeStoredAdminEmails(emails); // This writes to local JSON file
         return res.json({ emails: updated });
     } catch (error) {
         return res.status(500).json({ message: error.message });

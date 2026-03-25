@@ -1,14 +1,11 @@
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
-const Payment = require('../models/Payment');
-const User = require('../models/User');
-const { isSupabaseEnabled, getSupabaseAdmin } = require('../config/supabase');
+const { getSupabaseAdmin } = require('../config/supabase');
 
 const getRazorpayClient = () => {
     if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
         return null;
     }
-
     return new Razorpay({
         key_id: process.env.RAZORPAY_KEY_ID,
         key_secret: process.env.RAZORPAY_KEY_SECRET
@@ -34,31 +31,16 @@ const createOrder = async (req, res) => {
 
     try {
         const order = await razorpay.orders.create(options);
-
-        if (isSupabaseEnabled()) {
-            const supabase = getSupabaseAdmin();
-            const { error } = await supabase.from('payments').insert({
-                user_id: req.user._id,
-                test_id: testId,
-                razorpay_order_id: order.id,
-                amount: Number(amount),
-                status: 'pending'
-            });
-            if (error) throw error;
-
-            return res.json(order);
-        }
-        
-        // Save pending payment
-        const payment = new Payment({
-            user: req.user._id,
-            test: testId,
-            razorpayOrderId: order.id,
-            amount: amount,
+        const supabase = getSupabaseAdmin();
+        const { error } = await supabase.from('payments').insert([{
+            user_id: req.user._id, // Assume auth middleware sets _id as user.id (UUID)
+            test_id: testId,
+            razorpay_order_id: order.id,
+            amount: Number(amount),
             status: 'pending'
-        });
-        await payment.save();
+        }]);
 
+        if (error) throw error;
         res.json(order);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -77,18 +59,18 @@ const verifyPayment = async (req, res) => {
     }
 
     const body = razorpay_order_id + "|" + razorpay_payment_id;
-
     const expectedSignature = crypto
         .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
         .update(body.toString())
         .digest('hex');
 
     if (expectedSignature === razorpay_signature) {
-        if (isSupabaseEnabled()) {
-            const supabase = getSupabaseAdmin();
-            const { data: payment, error: paymentError } = await supabase
+        const supabase = getSupabaseAdmin();
+        try {
+            // Update payment status
+            const { data: payment, error: updateError } = await supabase
                 .from('payments')
-                .update({
+                .update({ 
                     status: 'completed',
                     razorpay_payment_id: razorpay_payment_id
                 })
@@ -96,42 +78,35 @@ const verifyPayment = async (req, res) => {
                 .select('*')
                 .single();
 
-            if (paymentError) throw paymentError;
+            if (updateError) throw updateError;
+            if (!payment) throw new Error('Payment record not found');
 
-            const { data: user } = await supabase
+            // Add test access to user
+            const { data: user, error: userError } = await supabase
                 .from('users')
                 .select('purchased_tests')
                 .eq('id', payment.user_id)
                 .single();
+            
+            if (userError) throw userError;
 
-            const purchasedTests = user?.purchased_tests || [];
+            const purchasedTests = user.purchased_tests || [];
+            // Check if testId already exists
             if (!purchasedTests.includes(payment.test_id)) {
                 purchasedTests.push(payment.test_id);
-                await supabase
+                const { error: updateUserError } = await supabase
                     .from('users')
                     .update({ purchased_tests: purchasedTests })
                     .eq('id', payment.user_id);
+                
+                if (updateUserError) throw updateUserError;
             }
 
-            return res.json({ message: 'Payment verified successfully' });
+            res.json({ message: "Payment verified successfully" });
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ message: err.message });
         }
-
-        // Update payment status
-        const payment = await Payment.findOne({ razorpayOrderId: razorpay_order_id });
-        if (payment) {
-            payment.status = 'completed';
-            payment.razorpayPaymentId = razorpay_payment_id;
-            await payment.save();
-
-            // Add test to user purchased tests
-            const user = await User.findById(payment.user);
-            if (!user.purchasedTests.includes(payment.test)) {
-                user.purchasedTests.push(payment.test);
-                await user.save();
-            }
-        }
-
-        res.json({ message: "Payment verified successfully" });
     } else {
         res.status(400).json({ message: "Invalid signature" });
     }

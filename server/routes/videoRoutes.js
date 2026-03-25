@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getVideos, addVideo, deleteVideo } = require('../controllers/videoController');
+const { getVideos, addVideo, deleteVideo, updateVideo } = require('../controllers/videoController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
 router.route('/')
@@ -8,6 +8,7 @@ router.route('/')
     .post(protect, admin, addVideo);
 
 router.route('/:id')
-    .delete(protect, admin, deleteVideo);
+    .delete(protect, admin, deleteVideo)
+    .put(protect, admin, updateVideo);
 
 module.exports = router;

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getTests, getTestById, createTest, submitTest } = require('../controllers/testController');
+const { getTests, getTestById, createTest, submitTest, deleteTest, updateTest } = require('../controllers/testController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
 router.route('/')
@@ -8,7 +8,9 @@ router.route('/')
     .post(protect, admin, createTest);
 
 router.route('/:id')
-    .get(protect, getTestById);
+    .get(protect, getTestById)
+    .delete(protect, admin, deleteTest)
+    .put(protect, admin, updateTest);
 
 router.post('/:id/submit', protect, submitTest);
 
