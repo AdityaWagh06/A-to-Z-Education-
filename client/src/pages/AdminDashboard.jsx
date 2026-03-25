@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { User, Video, FileText, Plus, BarChart, ShieldCheck, Trash2, Edit2, Book } from 'lucide-react';
+import { User, Video, FileText, Plus, BarChart, ShieldCheck, Trash2, Edit2, Book, Bell } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -554,6 +554,123 @@ const AdminDashboard = () => {
         );
     };
 
+    const ManageNews = () => {
+        const [news, setNews] = useState([]);
+        const [formData, setFormData] = useState({ title: '', description: '', link: '' });
+        const [loading, setLoading] = useState(false);
+
+        useEffect(() => {
+            fetchNews();
+        }, []);
+
+        const fetchNews = async () => {
+            try {
+                const { data } = await axios.get(`${API_URL}/api/announcements`);
+                setNews(data);
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
+        const handleSubmit = async (e) => {
+            e.preventDefault();
+            setLoading(true);
+            try {
+                await axios.post(`${API_URL}/api/announcements`, formData, getAuthConfig());
+                setFormData({ title: '', description: '', link: '' });
+                fetchNews();
+                alert('Announcement posted successfully');
+            } catch (err) {
+                console.error(err);
+                alert('Failed to post announcement');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        const handleDelete = async (id) => {
+            if (!window.confirm('Delete this announcement?')) return;
+            try {
+                await axios.delete(`${API_URL}/api/announcements/${id}`, getAuthConfig());
+                fetchNews();
+            } catch (err) {
+                console.error(err);
+                alert('Failed to delete announcement');
+            }
+        };
+
+        return (
+            <div className="space-y-8 max-w-4xl mx-auto">
+                <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                    <h3 className="text-xl font-bold mb-4 flex items-center gap-2"><Bell size={20}/> Post New Announcement</h3>
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                            <input 
+                                type="text" 
+                                className="w-full p-2 border rounded focus:ring-2 focus:ring-primary focus:border-primary outline-none transition" 
+                                value={formData.title} 
+                                onChange={e => setFormData({...formData, title: e.target.value})} 
+                                required 
+                                placeholder="Important Update"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">External Link (Optional)</label>
+                            <input 
+                                type="url" 
+                                className="w-full p-2 border rounded focus:ring-2 focus:ring-primary focus:border-primary outline-none transition" 
+                                value={formData.link} 
+                                onChange={e => setFormData({...formData, link: e.target.value})} 
+                                placeholder="https://example.com/news-article"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
+                            <textarea
+                                className="w-full p-2 border rounded focus:ring-2 focus:ring-primary focus:border-primary outline-none transition h-24"
+                                value={formData.description}
+                                onChange={e => setFormData({...formData, description: e.target.value})}
+                                required
+                                placeholder="Details about the announcement..."
+                            ></textarea>
+                        </div>
+                        <button type="submit" disabled={loading} className="bg-primary text-white px-6 py-2.5 rounded font-bold hover:bg-blue-700 transition flex items-center gap-2 justify-center shadow-md disabled:opacity-50">
+                            {loading ? 'Posting...' : 'Post Announcement'}
+                        </button>
+                    </form>
+                </div>
+
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                    <div className="p-4 bg-gray-50 border-b font-bold text-gray-700">Recent Announcements</div>
+                    <div className="divide-y divide-gray-100">
+                        {news.length > 0 ? news.map(item => (
+                            <div key={item._id} className="p-4 hover:bg-gray-50 transition flex justify-between items-start gap-4">
+                                <div>
+                                    <h4 className="font-bold text-gray-900 flex items-center gap-2">
+                                        {item.title}
+                                        {item.link && (
+                                            <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full hover:bg-blue-200 transition">
+                                                Link Attached ↗
+                                            </a>
+                                        )}
+                                    </h4>
+                                    <p className="text-gray-600 text-sm mt-1">{item.description}</p>
+                                    <p className="text-xs text-gray-400 mt-2">{new Date(item.createdAt).toLocaleDateString()}</p>
+                                </div>
+                                <button onClick={() => handleDelete(item._id)} className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded transition shrink-0" title="Delete">
+                                    <Trash2 size={18} />
+                                </button>
+                            </div>
+                        )) : (
+                            <div className="p-8 text-center text-gray-500 italic">No announcements posted yet.</div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     const ManageAdminAccess = () => {
         const [emails, setEmails] = useState([]);
         const [newEmail, setNewEmail] = useState('');
@@ -639,9 +756,15 @@ const AdminDashboard = () => {
                 </button>
                 <button onClick={() => setActiveTab('videos')} className={`w-full text-left p-3 rounded flex items-center gap-3 ${activeTab === 'videos' ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>
                     <Video size={20}/> Manage Videos
-                </button>                <button onClick={() => setActiveTab('classes')} className={`w-full text-left p-3 rounded flex items-center gap-3 ${activeTab === 'classes' ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>                          <Book size={20}/> Manage Classes
-                </button>                <button onClick={() => setActiveTab('tests')} className={`w-full text-left p-3 rounded flex items-center gap-3 ${activeTab === 'tests' ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>
+                </button>
+                <button onClick={() => setActiveTab('classes')} className={`w-full text-left p-3 rounded flex items-center gap-3 ${activeTab === 'classes' ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>
+                    <Book size={20}/> Manage Classes
+                </button>
+                <button onClick={() => setActiveTab('tests')} className={`w-full text-left p-3 rounded flex items-center gap-3 ${activeTab === 'tests' ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>
                     <FileText size={20}/> Upload Tests
+                </button>
+                <button onClick={() => setActiveTab('news')} className={`w-full text-left p-3 rounded flex items-center gap-3 ${activeTab === 'news' ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>
+                    <Bell size={20}/> Manage News
                 </button>
                 <button onClick={() => setActiveTab('admin-access')} className={`w-full text-left p-3 rounded flex items-center gap-3 ${activeTab === 'admin-access' ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>
                     <ShieldCheck size={20}/> Admin Access
@@ -655,6 +778,7 @@ const AdminDashboard = () => {
                 {activeTab === 'videos' && <ManageVideos />}
                 {activeTab === 'classes' && <ManageClasses />}
                 {activeTab === 'tests' && <ManageTests />}
+                {activeTab === 'news' && <ManageNews />}
                 {activeTab === 'admin-access' && <ManageAdminAccess />}
             </div>
         </div>

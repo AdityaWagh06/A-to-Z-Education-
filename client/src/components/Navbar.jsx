@@ -1,14 +1,29 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, User, BookOpen, Home, BarChart } from 'lucide-react';
-import { useState } from 'react';
+import { LogOut, User, BookOpen, Home, BarChart, ChevronDown, Settings } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
 import AuthModal from './AuthModal';
 
 const Navbar = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const [authModalOpen, setAuthModalOpen] = useState(false);
-    const [authMode, setAuthMode] = useState('login'); // 'login' or 'register'
+    const [authMode, setAuthMode] = useState('login');
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const dropdownRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsDropdownOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
 
     const handleLogout = () => {
         logout();
@@ -60,30 +75,88 @@ const Navbar = () => {
                             )}
                             
                             {user ? (
-                                <div className="flex items-center gap-3 pl-6 border-l ml-2">
-                                    <div className="hidden md:block text-right mr-2">
-                                        <p className="text-sm font-bold text-gray-800 leading-none">{user?.name}</p>
-                                        <p className="text-xs text-gray-500 uppercase">{user?.role}</p>
-                                    </div>
-                                    
-                                    {user?.picture ? (
-                                        <img 
-                                            src={user.picture} 
-                                            alt={user.name} 
-                                            className="h-10 w-10 rounded-full object-cover border border-gray-200"
-                                        />
-                                    ) : (
-                                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold border border-primary/20">
-                                            {user?.name?.charAt(0)?.toUpperCase()}
+                                <div className="relative" ref={dropdownRef}>
+                                    <button 
+                                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                                        className="flex items-center gap-3 pl-6 border-l ml-3 focus:outline-none hover:opacity-80 transition-opacity"
+                                    >
+                                        <div className="hidden md:block text-right">
+                                            <p className="text-sm font-bold text-gray-800 leading-none">{user?.name}</p>
+                                            <p className="text-[10px] text-gray-500 uppercase font-semibold mt-0.5 tracking-wider">{user?.role}</p>
+                                        </div>
+                                        
+                                        <div className="relative">
+                                            {user?.picture ? (
+                                                <img 
+                                                    src={user.picture} 
+                                                    alt={user.name} 
+                                                    className="h-9 w-9 rounded-full object-cover border border-gray-200 shadow-sm"
+                                                />
+                                            ) : (
+                                                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold border border-primary/20 shadow-sm">
+                                                    {user?.name?.charAt(0)?.toUpperCase()}
+                                                </div>
+                                            )}
+                                            <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm border border-gray-100">
+                                                <ChevronDown size={12} className={`text-gray-400 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                                            </div>
+                                        </div>
+                                    </button>
+
+                                    {isDropdownOpen && (
+                                        <div className="absolute right-0 mt-3 w-60 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200 origin-top-right overflow-hidden">
+                                            <div className="px-4 py-3 bg-gray-50/50 border-b border-gray-100">
+                                                <p className="text-sm font-bold text-gray-800 truncate">{user?.name}</p>
+                                                <p className="text-xs text-gray-500 truncate mt-0.5">{user?.email}</p>
+                                            </div>
+                                            
+                                            <div className="py-1">
+                                                {user?.role === 'student' && (
+                                                    <Link 
+                                                        to="/student/profile" 
+                                                        className="px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-primary flex items-center gap-3 transition-colors group"
+                                                        onClick={() => setIsDropdownOpen(false)}
+                                                    >
+                                                        <User size={16} className="text-gray-400 group-hover:text-primary transition-colors" /> 
+                                                        My Profile
+                                                    </Link>
+                                                )}
+                                                
+                                                {user?.role === 'admin' ? (
+                                                     <Link 
+                                                        to="/admin/dashboard" 
+                                                        className="px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-primary flex items-center gap-3 transition-colors group"
+                                                        onClick={() => setIsDropdownOpen(false)}
+                                                    >
+                                                        <BarChart size={16} className="text-gray-400 group-hover:text-primary transition-colors" /> 
+                                                        Admin Dashboard
+                                                    </Link>
+                                                ) : (
+                                                    <Link 
+                                                        to="/student/home" 
+                                                        className="px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-primary flex items-center gap-3 transition-colors group"
+                                                        onClick={() => setIsDropdownOpen(false)}
+                                                    >
+                                                        <Home size={16} className="text-gray-400 group-hover:text-primary transition-colors" /> 
+                                                        Go to Home
+                                                    </Link>
+                                                )}
+                                            </div>
+                                            
+                                            <div className="border-t border-gray-100 pt-1 mt-1">
+                                                <button 
+                                                    onClick={() => {
+                                                        handleLogout();
+                                                        setIsDropdownOpen(false);
+                                                    }}
+                                                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-3 transition-colors font-medium group"
+                                                >
+                                                    <LogOut size={16} className="text-red-400 group-hover:text-red-600 transition-colors" /> 
+                                                    Sign Out
+                                                </button>
+                                            </div>
                                         </div>
                                     )}
-
-                                    <button 
-                                        onClick={handleLogout} 
-                                        className="bg-red-50 text-red-600 hover:bg-red-100 px-3 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2"
-                                    >
-                                        <LogOut size={16}/> <span className="hidden md:inline">Logout</span>
-                                    </button>
                                 </div>
                             ) : (
                                 <div className="flex items-center gap-3">

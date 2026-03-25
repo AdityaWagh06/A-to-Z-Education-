@@ -28,6 +28,9 @@ A comprehensive Full-Stack EdTech solution designed to provide seamless learning
 *   **New: Manage Classes**:
     *   Add or remove standards/classes dynamically.
     *   Classes appear instantly on student dashboards.
+*   **Announcements System**:
+    *   Create and delete news updates for students.
+    *   **External Links**: Attach clickable links to announcements for easy navigation to external recources.
 *   **Content Management**:
     *   Upload and manage Video Lessons.
     *   **Test Upload System**: Drag-and-drop interface for uploading Question Papers (PDF) and Answer Keys.

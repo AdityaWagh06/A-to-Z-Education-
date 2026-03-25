@@ -17,6 +17,7 @@ const getAnnouncements = async (req, res) => {
             _id: a.id,
             title: a.title,
             description: a.description,
+            link: a.link, // Include link in response
             active: a.active,
             createdAt: a.created_at
         })));
@@ -28,7 +29,7 @@ const getAnnouncements = async (req, res) => {
 // @desc    Add announcement
 // @access  Admin
 const createAnnouncement = async (req, res) => {
-    const { title, description } = req.body;
+    const { title, description, link } = req.body;
     try {
         const supabase = getSupabaseAdmin();
         const { data, error } = await supabase
@@ -36,6 +37,7 @@ const createAnnouncement = async (req, res) => {
             .insert([{
                 title,
                 description,
+                link, // Save the link
                 active: true
             }])
             .select('*')
@@ -47,6 +49,7 @@ const createAnnouncement = async (req, res) => {
             _id: data.id,
             title: data.title,
             description: data.description,
+            link: data.link,
             active: data.active,
             createdAt: data.created_at
         });
