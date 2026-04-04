@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, User, BookOpen, Home, BarChart, ChevronDown, Settings } from 'lucide-react';
+import { LogOut, User, BookOpen, Home, BarChart, ChevronDown } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import AuthModal from './AuthModal';
 

@@ -96,17 +96,6 @@ export const AuthProvider = ({ children }) => {
         setAuthSource('backend');
     };
 
-    const devLogin = async () => {
-        const res = await axios.post(`${API_URL}/api/auth/dev`, {
-            name: 'Demo Student',
-            email: 'demo.student@atoz.local'
-        });
-        localStorage.setItem('token', res.data.token);
-        axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
-        setUser(res.data);
-        setAuthSource('backend');
-    };
-
     const signUpWithPassword = async ({ name, email, password }) => {
         if (!hasSupabaseConfig || !supabase) {
             throw new Error('Supabase is not configured');

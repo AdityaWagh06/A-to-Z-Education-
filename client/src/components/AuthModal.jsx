@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
 import { X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -20,6 +20,20 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }) => {
     const [googleCredential, setGoogleCredential] = useState(null);
     const [name, setName] = useState('');
     const [mobile, setMobile] = useState('');
+
+    useEffect(() => {
+        if (!isOpen) {
+            setStep('initial');
+            setGoogleCredential(null);
+            setName('');
+            setMobile('');
+            return;
+        }
+
+        if (defaultTab === 'login') {
+            setStep('initial');
+        }
+    }, [defaultTab, isOpen]);
 
     if (!isOpen) return null;
 
@@ -65,12 +79,6 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }) => {
             onClose();
         }
     };
-
-    // Reset state when defaultTab changes
-    if (isOpen && step === 'details' && defaultTab === 'login') {
-        // If switched to login, reset to google auth
-        setStep('initial');
-    }
 
     return (
         <div 

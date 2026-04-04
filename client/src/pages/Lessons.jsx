@@ -3,6 +3,8 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import ReactPlayer from 'react-player';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const getYouTubeID = (url) => {
     if (!url) return null;
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
@@ -19,7 +21,7 @@ const Lessons = () => {
 
     useEffect(() => {
         const standardQuery = standard ? `&standard=${standard}` : '';
-        axios.get(`http://localhost:5000/api/videos?subject=${subject}${standardQuery}`)
+        axios.get(`${API_URL}/api/videos?subject=${subject}${standardQuery}`)
             .then(res => {
                 setVideos(res.data);
                 if (res.data.length > 0) setSelectedVideo(res.data[0]);

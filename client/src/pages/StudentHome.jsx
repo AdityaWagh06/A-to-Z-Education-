@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom';
 import { BookOpen, Bell, ChevronRight, ExternalLink } from 'lucide-react';
 import axios from 'axios';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const StudentHome = () => {
     const { user, updateStandard } = useAuth();
     const [announcements, setAnnouncements] = useState([]);
@@ -21,8 +23,8 @@ const StudentHome = () => {
         const fetchData = async () => {
             try {
                 const [annRes, stdRes] = await Promise.all([
-                    axios.get('http://localhost:5000/api/announcements'),
-                    axios.get('http://localhost:5000/api/standards')
+                    axios.get(`${API_URL}/api/announcements`),
+                    axios.get(`${API_URL}/api/standards`)
                 ]);
                 setAnnouncements(annRes.data);
                 
@@ -93,7 +95,7 @@ const StudentHome = () => {
                                      </h3>
                                      <p className="text-sm text-gray-600 line-clamp-3 mb-4 flex-grow">{ann.description}</p>
                                      <div className="flex justify-between items-center mt-auto">
-                                        <span className="text-xs text-gray-400">{new Date(ann.created_at).toLocaleDateString()}</span>
+                                        <span className="text-xs text-gray-400">{new Date(ann.createdAt || ann.created_at).toLocaleDateString()}</span>
                                         {ann.link && (
                                             <a 
                                                 href={ann.link} 
