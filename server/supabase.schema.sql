@@ -1,5 +1,4 @@
 -- Run this SQL in Supabase SQL Editor
-
 create extension if not exists pgcrypto;
 
 create table if not exists users (
@@ -11,6 +10,9 @@ create table if not exists users (
   standard int,
   progress jsonb not null default '{"maths":{"lessonsCompleted":[],"testsTaken":[]},"english":{"lessonsCompleted":[],"testsTaken":[]},"marathi":{"lessonsCompleted":[],"testsTaken":[]},"intelligence":{"lessonsCompleted":[],"testsTaken":[]}}'::jsonb,
   purchased_tests jsonb not null default '[]'::jsonb,
+  mobile_no text,
+  picture text,
+  last_login_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -21,7 +23,7 @@ create table if not exists videos (
   youtube_url text not null,
   thumbnail text,
   subject text not null check (subject in ('maths','english','marathi','intelligence')),
-  standard int not null check (standard in (2,3,4,5)),
+  standard int not null check (standard in (2,3,4,5,6,7,8,9,10)),
   duration text,
   created_at timestamptz not null default now()
 );
@@ -30,11 +32,13 @@ create table if not exists tests (
   id uuid primary key default gen_random_uuid(),
   title text not null,
   subject text not null check (subject in ('maths','english','marathi','intelligence')),
-  standard int not null check (standard in (2,3,4,5)),
+  standard int not null check (standard in (2,3,4,5,6,7,8,9,10)),
   price numeric not null default 0,
   questions jsonb not null default '[]'::jsonb,
   time_limit int not null default 15,
   is_locked boolean not null default false,
+  pdf_path text,
+  answer_sheet_path text,
   created_at timestamptz not null default now()
 );
 
@@ -42,6 +46,7 @@ create table if not exists announcements (
   id uuid primary key default gen_random_uuid(),
   title text not null,
   description text not null,
+  link text,
   active boolean not null default true,
   created_at timestamptz not null default now()
 );

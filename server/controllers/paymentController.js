@@ -12,31 +12,54 @@ const getRazorpayClient = () => {
     });
 };
 
+const getPaymentConfig = (_req, res) => {
+    if (!process.env.RAZORPAY_KEY_ID) {
+        return res.status(503).json({ message: 'Razorpay is not configured yet.' });
+    }
+
+    return res.json({ keyId: process.env.RAZORPAY_KEY_ID });
+};
+
 // @desc    Create Razorpay Order
 // @route   POST /api/payments/order
 // @access  Protected
 const createOrder = async (req, res) => {
-    const { amount, testId } = req.body;
+    const { testId } = req.body;
     const razorpay = getRazorpayClient();
 
     if (!razorpay) {
         return res.status(503).json({ message: 'Payments are not configured yet. Please add Razorpay keys.' });
     }
 
-    const options = {
-        amount: amount * 100, // amount in smallest currency unit
-        currency: "INR",
-        receipt: `receipt_order_${Date.now()}`
-    };
-
     try {
-        const order = await razorpay.orders.create(options);
         const supabase = getSupabaseAdmin();
+        const { data: test, error: testError } = await supabase
+            .from('tests')
+            .select('id, price, is_locked')
+            .eq('id', testId)
+            .single();
+
+        if (testError || !test) {
+            return res.status(404).json({ message: 'Test not found' });
+        }
+
+        const finalAmount = Number(test.price || 0);
+        if (finalAmount <= 0 || !test.is_locked) {
+            return res.status(400).json({ message: 'This test does not require payment.' });
+        }
+
+        const options = {
+            amount: Math.round(finalAmount * 100), // amount in smallest currency unit
+            currency: 'INR',
+            receipt: `receipt_order_${Date.now()}`
+        };
+
+        const order = await razorpay.orders.create(options);
         const { error } = await supabase.from('payments').insert([{
-            user_id: req.user._id, // Assume auth middleware sets _id as user.id (UUID)
+            user_id: req.user.id,
             test_id: testId,
             razorpay_order_id: order.id,
-            amount: Number(amount),
+            amount: finalAmount,
             status: 'pending'
         }]);
 
@@ -51,7 +74,7 @@ const createOrder = async (req, res) => {
 // @route   POST /api/payments/verify
 // @access  Protected
 const verifyPayment = async (req, res) => {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, testId } = req.body;
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
     const razorpay = getRazorpayClient();
 
     if (!razorpay || !process.env.RAZORPAY_KEY_SECRET) {
@@ -75,6 +98,7 @@ const verifyPayment = async (req, res) => {
                     razorpay_payment_id: razorpay_payment_id
                 })
                 .eq('razorpay_order_id', razorpay_order_id)
+                .eq('user_id', req.user.id)
                 .select('*')
                 .single();
 
@@ -112,4 +136,4 @@ const verifyPayment = async (req, res) => {
     }
 };
 
-module.exports = { createOrder, verifyPayment };
+module.exports = { getPaymentConfig, createOrder, verifyPayment };

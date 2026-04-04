@@ -1,6 +1,29 @@
 const path = require('path');
 const fs = require('fs');
+const jwt = require('jsonwebtoken');
 const { getSupabaseAdmin } = require('../config/supabase');
+
+const buildFileUrl = (req, relativePath) => encodeURI(`${req.protocol}://${req.get('host')}${relativePath}`);
+
+const getOptionalAuthUser = async (req, supabase) => {
+    try {
+        const header = req.headers.authorization;
+        if (!header || !header.startsWith('Bearer ')) return null;
+
+        const token = header.split(' ')[1];
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const { data, error } = await supabase
+            .from('users')
+            .select('id, role, purchased_tests')
+            .eq('id', decoded.id)
+            .maybeSingle();
+
+        if (error || !data) return null;
+        return data;
+    } catch {
+        return null;
+    }
+};
 
 // @desc    Get all tests
 // @route   GET /api/tests
@@ -9,6 +32,10 @@ const getTests = async (req, res) => {
     const { standard, subject } = req.query;
     try {
         const supabase = getSupabaseAdmin();
+        const authUser = await getOptionalAuthUser(req, supabase);
+        const purchasedSet = new Set(authUser?.purchased_tests || []);
+        const isAdmin = authUser?.role === 'admin';
+
         let query = supabase.from('tests').select('*').order('created_at', { ascending: false });
 
         if (standard) query = query.eq('standard', Number(standard));
@@ -17,19 +44,27 @@ const getTests = async (req, res) => {
         const { data, error } = await query;
         if (error) throw error;
 
-        return res.json((data || []).map((t) => ({
-            _id: t.id,
-            title: t.title,
-            subject: t.subject,
-            standard: t.standard,
-            price: t.price,
-            pdfUrl: t.pdf_path ? `${req.protocol}://${req.get('host')}${t.pdf_path}` : null,
-            answerSheetUrl: t.answer_sheet_path ? `${req.protocol}://${req.get('host')}${t.answer_sheet_path}` : null,
-            questions: t.questions || [],
-            timeLimit: t.time_limit,
-            isLocked: t.is_locked,
-            createdAt: t.created_at
-        })));
+        return res.json((data || []).map((t) => {
+            const isPurchased = purchasedSet.has(t.id);
+            const hideContent = t.is_locked && Number(t.price) > 0 && !isPurchased && !isAdmin;
+
+            return {
+                _id: t.id,
+                title: t.title,
+                subject: t.subject,
+                standard: t.standard,
+                price: t.price,
+                pdfUrl: !hideContent && t.pdf_path ? buildFileUrl(req, t.pdf_path) : null,
+                answerSheetUrl: !hideContent && t.answer_sheet_path ? buildFileUrl(req, t.answer_sheet_path) : null,
+                hasPdf: Boolean(t.pdf_path),
+                hasAnswerSheet: Boolean(t.answer_sheet_path),
+                isPurchased,
+                questions: t.questions || [],
+                timeLimit: t.time_limit,
+                isLocked: t.is_locked,
+                createdAt: t.created_at
+            };
+        }));
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -55,7 +90,7 @@ const getTestById = async (req, res) => {
              const { data: user } = await supabase
                 .from('users')
                 .select('purchased_tests')
-                .eq('id', req.user._id) // user.id from auth middleware
+                     .eq('id', req.user.id)
                 .single();
             
             const purchased = (user?.purchased_tests || []).includes(test.id);
@@ -66,8 +101,8 @@ const getTestById = async (req, res) => {
 
         res.json({
             ...test,
-            pdfUrl: test.pdf_path ? `${req.protocol}://${req.get('host')}${test.pdf_path}` : null,
-            answerSheetUrl: test.answer_sheet_path ? `${req.protocol}://${req.get('host')}${test.answer_sheet_path}` : null,
+            pdfUrl: test.pdf_path ? buildFileUrl(req, test.pdf_path) : null,
+            answerSheetUrl: test.answer_sheet_path ? buildFileUrl(req, test.answer_sheet_path) : null,
         });
 
     } catch (error) {
@@ -155,7 +190,7 @@ const submitTest = async (req, res) => {
         const { data: user, error: userError } = await supabase
             .from('users')
             .select('progress')
-            .eq('id', req.user._id)
+            .eq('id', req.user.id)
             .single();
 
         if (userError) throw userError;
@@ -179,7 +214,7 @@ const submitTest = async (req, res) => {
         const { error: updateError } = await supabase
             .from('users')
             .update({ progress })
-            .eq('id', req.user._id);
+            .eq('id', req.user.id);
 
         if (updateError) throw updateError;
 

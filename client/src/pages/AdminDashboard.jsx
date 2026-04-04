@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { User, Video, FileText, Plus, BarChart, ShieldCheck, Trash2, Edit2, Book, Bell } from 'lucide-react';
+import { User, Video, FileText, Plus, BarChart, ShieldCheck, Trash2, Edit2, Book, Bell, Mail } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -13,10 +13,24 @@ const getAuthConfig = () => {
 
 const AdminDashboard = () => {
     const [activeTab, setActiveTab] = useState('overview');
-    const [stats, setStats] = useState({ users: 0, videos: 0, tests: 0 });
+    const [feedback, setFeedback] = useState(null);
+    const feedbackTimeoutRef = useRef(null);
+
+    const notify = (type, text) => {
+        setFeedback({ type, text });
+        if (feedbackTimeoutRef.current) {
+            clearTimeout(feedbackTimeoutRef.current);
+        }
+        feedbackTimeoutRef.current = setTimeout(() => setFeedback(null), 2500);
+    };
 
     useEffect(() => {
         // Fetch stats if API available
+        return () => {
+            if (feedbackTimeoutRef.current) {
+                clearTimeout(feedbackTimeoutRef.current);
+            }
+        };
     }, []);
 
     const Overview = () => (
@@ -71,17 +85,17 @@ const AdminDashboard = () => {
                 const config = getAuthConfig();
                 if (editingId) {
                     await axios.put(`${API_URL}/api/videos/${editingId}`, formData, config);
-                    alert('Video Updated Successfully!');
+                    notify('success', 'Video updated.');
                     setEditingId(null);
                 } else {
                     await axios.post(`${API_URL}/api/videos`, formData, config);
-                    alert('Video Added Successfully!');
+                    notify('success', 'Video added.');
                 }
                 setFormData({ ...formData, title: '', youtubeUrl: '' }); // Keep subject/standard
                 fetchVideos();
             } catch (err) {
                 console.error('Video save error:', err);
-                alert('Error saving video');
+                notify('error', 'Could not save video.');
             } finally {
                 setLoading(false);
             }
@@ -99,13 +113,13 @@ const AdminDashboard = () => {
         };
 
         const handleDelete = async (id) => {
-            if (!window.confirm('Are you sure you want to delete this video?')) return;
             try {
                 await axios.delete(`${API_URL}/api/videos/${id}`, getAuthConfig());
                 fetchVideos();
+                notify('success', 'Video deleted.');
             } catch (err) {
                 console.error('Delete error:', err);
-                alert('Failed to delete video');
+                notify('error', 'Could not delete video.');
             }
         };
 
@@ -165,7 +179,7 @@ const AdminDashboard = () => {
                 </div>
 
                 <div className="bg-white p-6 rounded-card shadow-md max-w-4xl mx-auto">
-                    <h3 className="text-xl font-bold mb-4 uppercase text-gray-500 tracking-wide text-sm">{formData.subject} - Standard {formData.standard} Videos</h3>
+                    <h3 className="text-sm font-bold mb-4 uppercase text-gray-500 tracking-wide">{formData.subject} - Standard {formData.standard} Videos</h3>
                     <div className="space-y-4">
                         {videos.length === 0 ? (
                             <p className="text-gray-500 text-center py-8">No videos found for this selection.</p>
@@ -224,16 +238,18 @@ const AdminDashboard = () => {
                 await axios.post(`${API_URL}/api/standards`, { ...formData, value: Number(formData.value) }, getAuthConfig());
                 setFormData({ label: '', value: '' });
                 fetchClasses();
-                alert('Class added successfully');
-            } catch (err) { console.error(err); alert('Failed to add class'); }
+                notify('success', 'Class added.');
+            } catch (err) { console.error(err); notify('error', 'Could not add class.'); }
         };
 
         const handleDelete = async (id) => {
-            if (window.confirm('Delete this class?')) {
-                try {
-                    await axios.delete(`${API_URL}/api/standards/${id}`, getAuthConfig());
-                    fetchClasses();
-                } catch (err) { console.error(err); }
+            try {
+                await axios.delete(`${API_URL}/api/standards/${id}`, getAuthConfig());
+                fetchClasses();
+                notify('success', 'Class deleted.');
+            } catch (err) {
+                console.error(err);
+                notify('error', 'Could not delete class.');
             }
         };
 
@@ -321,7 +337,7 @@ const AdminDashboard = () => {
             e.preventDefault();
             
             if (!editingId && !files.pdf) {
-                alert('Please upload a Test PDF');
+                notify('error', 'Please upload a test PDF.');
                 return;
             }
 
@@ -335,7 +351,7 @@ const AdminDashboard = () => {
                         ...formData,
                         isLocked: formData.price > 0
                     }, config);
-                    alert('Test updated successfully');
+                    notify('success', 'Test updated.');
                 } else {
                     const data = new FormData();
                     data.append('title', formData.title);
@@ -354,7 +370,7 @@ const AdminDashboard = () => {
                             'Content-Type': 'multipart/form-data' 
                         }
                     });
-                    alert('Test uploaded successfully');
+                    notify('success', 'Test uploaded.');
                 }
 
                 fetchTests();
@@ -363,7 +379,7 @@ const AdminDashboard = () => {
             } catch (err) {
                 console.error(err);
                 const message = err?.response?.data?.message || err?.message || 'Failed to save test';
-                alert(`Failed: ${message}`);
+                notify('error', `Failed: ${message}`);
             } finally {
                 setUploading(false);
             }
@@ -398,13 +414,13 @@ const AdminDashboard = () => {
         };
 
         const handleDelete = async (id) => {
-            if (!window.confirm('Are you sure you want to delete this test?')) return;
             try {
                 await axios.delete(`${API_URL}/api/tests/${id}`, getAuthConfig());
                 fetchTests(); 
+                notify('success', 'Test deleted.');
             } catch (err) {
                 console.error('Delete error:', err);
-                alert('Failed to delete test');
+                notify('error', 'Could not delete test.');
             }
         };
 
@@ -579,23 +595,23 @@ const AdminDashboard = () => {
                 await axios.post(`${API_URL}/api/announcements`, formData, getAuthConfig());
                 setFormData({ title: '', description: '', link: '' });
                 fetchNews();
-                alert('Announcement posted successfully');
+                notify('success', 'Announcement posted.');
             } catch (err) {
                 console.error(err);
-                alert('Failed to post announcement');
+                notify('error', 'Could not post announcement.');
             } finally {
                 setLoading(false);
             }
         };
 
         const handleDelete = async (id) => {
-            if (!window.confirm('Delete this announcement?')) return;
             try {
                 await axios.delete(`${API_URL}/api/announcements/${id}`, getAuthConfig());
                 fetchNews();
+                notify('success', 'Announcement deleted.');
             } catch (err) {
                 console.error(err);
-                alert('Failed to delete announcement');
+                notify('error', 'Could not delete announcement.');
             }
         };
 
@@ -704,11 +720,11 @@ const AdminDashboard = () => {
                 setSaving(true);
                 const { data } = await axios.put(`${API_URL}/api/settings/admin-emails`, { emails }, getAuthConfig());
                 setEmails(data.emails || []);
-                alert('Admin access list saved');
+                notify('success', 'Admin access list saved.');
             } catch (error) {
                 console.error(error);
                 const message = error?.response?.data?.message || error?.message || 'Failed to save admin access list';
-                alert(`Failed to save admin access list: ${message}`);
+                notify('error', `Could not save admin access list: ${message}`);
             } finally {
                 setSaving(false);
             }
@@ -747,6 +763,110 @@ const AdminDashboard = () => {
         );
     };
 
+    const BroadcastEmail = () => {
+        const [formData, setFormData] = useState({
+            subject: '',
+            message: '',
+            ctaText: '',
+            ctaLink: ''
+        });
+        const [sending, setSending] = useState(false);
+        const [result, setResult] = useState(null);
+
+        const handleSubmit = async (e) => {
+            e.preventDefault();
+            setSending(true);
+            setResult(null);
+
+            try {
+                const { data } = await axios.post(`${API_URL}/api/settings/broadcast-email`, formData, getAuthConfig());
+                setResult({ type: 'success', data });
+                setFormData((prev) => ({ ...prev, subject: '', message: '' }));
+            } catch (error) {
+                const message = error?.response?.data?.message || error?.message || 'Failed to send broadcast email';
+                setResult({ type: 'error', message });
+            } finally {
+                setSending(false);
+            }
+        };
+
+        return (
+            <div className="bg-white p-6 rounded-card shadow-md max-w-3xl">
+                <h2 className="text-2xl font-bold mb-2">Broadcast Email</h2>
+                <p className="text-gray-600 mb-6">Send offers, updates, or announcements to all users who have logged in.</p>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Email Subject</label>
+                        <input
+                            type="text"
+                            required
+                            value={formData.subject}
+                            onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                            className="w-full border rounded-lg p-2"
+                            placeholder="New offer for this week"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
+                        <textarea
+                            required
+                            value={formData.message}
+                            onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                            className="w-full border rounded-lg p-2 h-32"
+                            placeholder="Write the email body here..."
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">CTA Text (Optional)</label>
+                            <input
+                                type="text"
+                                value={formData.ctaText}
+                                onChange={(e) => setFormData({ ...formData, ctaText: e.target.value })}
+                                className="w-full border rounded-lg p-2"
+                                placeholder="Explore Now"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">CTA Link (Optional)</label>
+                            <input
+                                type="url"
+                                value={formData.ctaLink}
+                                onChange={(e) => setFormData({ ...formData, ctaLink: e.target.value })}
+                                className="w-full border rounded-lg p-2"
+                                placeholder="https://example.com/offer"
+                            />
+                        </div>
+                    </div>
+
+                    <button
+                        type="submit"
+                        disabled={sending}
+                        className="bg-primary text-white px-4 py-2 rounded-lg disabled:opacity-60"
+                    >
+                        {sending ? 'Sending...' : 'Send To All Users'}
+                    </button>
+                </form>
+
+                {result?.type === 'success' && (
+                    <div className="mt-4 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg p-3">
+                        Sent {result.data.sent} of {result.data.totalRecipients} emails.
+                        {result.data.failedCount > 0 ? ` Failed: ${result.data.failedCount}.` : ''}
+                    </div>
+                )}
+
+                {result?.type === 'error' && (
+                    <div className="mt-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">
+                        {result.message}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     return (
         <div className="flex h-[calc(100vh-64px)] bg-gray-100">
              {/* Admin Sidebar */}
@@ -769,17 +889,26 @@ const AdminDashboard = () => {
                 <button onClick={() => setActiveTab('admin-access')} className={`w-full text-left p-3 rounded flex items-center gap-3 ${activeTab === 'admin-access' ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>
                     <ShieldCheck size={20}/> Admin Access
                 </button>
+                <button onClick={() => setActiveTab('broadcast')} className={`w-full text-left p-3 rounded flex items-center gap-3 ${activeTab === 'broadcast' ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>
+                    <Mail size={20}/> Broadcast Email
+                </button>
             </div>
 
             {/* Content */}
             <div className="flex-1 p-8 overflow-y-auto">
                 <h1 className="text-3xl font-bold mb-8 capitalize">{activeTab.replace('-', ' ')}</h1>
+                {feedback && (
+                    <div className={`mb-6 rounded-lg border px-4 py-3 text-sm ${feedback.type === 'success' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+                        {feedback.text}
+                    </div>
+                )}
                 {activeTab === 'overview' && <Overview />}
                 {activeTab === 'videos' && <ManageVideos />}
                 {activeTab === 'classes' && <ManageClasses />}
                 {activeTab === 'tests' && <ManageTests />}
                 {activeTab === 'news' && <ManageNews />}
                 {activeTab === 'admin-access' && <ManageAdminAccess />}
+                {activeTab === 'broadcast' && <BroadcastEmail />}
             </div>
         </div>
     );

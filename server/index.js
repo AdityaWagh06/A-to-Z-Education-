@@ -15,12 +15,22 @@ dotenv.config();
 
 const app = express();
 
+const requiredEnvVars = ['JWT_SECRET', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];
+const missingEnvVars = requiredEnvVars.filter((key) => !process.env[key]);
+
+if (missingEnvVars.length > 0) {
+    throw new Error(`Missing required environment variables: ${missingEnvVars.join(', ')}`);
+}
+
+if (process.env.NODE_ENV === 'production' && process.env.ALLOW_DEV_GOOGLE_BYPASS === 'true') {
+    console.warn('Security warning: ALLOW_DEV_GOOGLE_BYPASS is enabled in production. Disable it immediately.');
+}
+
 
 app.use(fileUpload({
     createParentPath: true,
     limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
 }));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const allowedOrigins = [
     process.env.CLIENT_ORIGIN,
@@ -36,6 +46,9 @@ app.use(cors({
         return callback(new Error('Not allowed by CORS'));
     }
 }));
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);

@@ -32,6 +32,11 @@ const decodeJwtPayload = (token) => {
     return JSON.parse(payloadJson);
 };
 
+const isMissingColumnError = (error, columnName) => {
+    const details = `${error?.message || ''} ${error?.details || ''} ${error?.hint || ''}`.toLowerCase();
+    return details.includes(`'${columnName.toLowerCase()}'`) && details.includes('column');
+};
+
 // @desc    Auth user & get token
 // @route   POST /api/auth/google
 // @access  Public
@@ -97,33 +102,61 @@ const googleLogin = async (req, res) => {
 
         let user = existing;
         if (user) {
-            const updates = { google_id: googleId, role: resolvedRole, picture };
+            const updates = { google_id: googleId, role: resolvedRole, picture, last_login_at: new Date().toISOString() };
             if (name) updates.name = name;
             if (mobile) updates.mobile_no = mobile;
 
-            const { data: updated, error: updateError } = await supabase
+            let { data: updated, error: updateError } = await supabase
                 .from('users')
                 .update(updates)
                 .eq('id', user.id)
                 .select('*')
                 .single();
+
+            if (updateError && isMissingColumnError(updateError, 'last_login_at')) {
+                const { last_login_at, ...fallbackUpdates } = updates;
+                const fallback = await supabase
+                    .from('users')
+                    .update(fallbackUpdates)
+                    .eq('id', user.id)
+                    .select('*')
+                    .single();
+                updated = fallback.data;
+                updateError = fallback.error;
+            }
+
             if (updateError) throw updateError;
             user = updated;
         } else {
-            const { data: created, error: createError } = await supabase
+            const insertPayload = {
+                name,
+                email,
+                google_id: googleId,
+                role: resolvedRole,
+                progress: buildProgress(),
+                purchased_tests: [],
+                picture,
+                mobile_no: mobile,
+                last_login_at: new Date().toISOString()
+            };
+
+            let { data: created, error: createError } = await supabase
                 .from('users')
-                .insert({
-                    name,
-                    email,
-                    google_id: googleId,
-                    role: resolvedRole,
-                    progress: buildProgress(),
-                    purchased_tests: [],
-                    picture,
-                    mobile_no: mobile
-                })
+                .insert(insertPayload)
                 .select('*')
                 .single();
+
+            if (createError && isMissingColumnError(createError, 'last_login_at')) {
+                const { last_login_at, ...fallbackInsertPayload } = insertPayload;
+                const fallback = await supabase
+                    .from('users')
+                    .insert(fallbackInsertPayload)
+                    .select('*')
+                    .single();
+                created = fallback.data;
+                createError = fallback.error;
+            }
+
             if (createError) throw createError;
             user = created;
         }
