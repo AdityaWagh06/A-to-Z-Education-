@@ -570,6 +570,31 @@ const AdminDashboard = () => {
         );
     };
 
+    const ManageSubjects = () => {
+        const subjects = [
+            { key: 'maths', label: 'Maths' },
+            { key: 'english', label: 'English' },
+            { key: 'marathi', label: 'Marathi' },
+            { key: 'intelligence', label: 'Intelligence Test' },
+        ];
+
+        return (
+            <div className="bg-white p-6 rounded-card shadow-md max-w-4xl mx-auto">
+                <h2 className="text-2xl font-bold mb-2">Subjects</h2>
+                <p className="text-gray-600 mb-6">These subjects are currently available across lessons and tests.</p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {subjects.map((subject) => (
+                        <div key={subject.key} className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                            <h3 className="font-semibold text-gray-800">{subject.label}</h3>
+                            <p className="text-xs text-gray-500 mt-1 uppercase tracking-wide">Key: {subject.key}</p>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
     const ManageNews = () => {
         const [news, setNews] = useState([]);
         const [formData, setFormData] = useState({ title: '', description: '', link: '' });
@@ -880,6 +905,9 @@ const AdminDashboard = () => {
                 <button onClick={() => setActiveTab('classes')} className={`w-full text-left p-3 rounded flex items-center gap-3 ${activeTab === 'classes' ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>
                     <Book size={20}/> Manage Classes
                 </button>
+                <button onClick={() => setActiveTab('subjects')} className={`w-full text-left p-3 rounded flex items-center gap-3 ${activeTab === 'subjects' ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>
+                    <Book size={20}/> Manage Subjects
+                </button>
                 <button onClick={() => setActiveTab('tests')} className={`w-full text-left p-3 rounded flex items-center gap-3 ${activeTab === 'tests' ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>
                     <FileText size={20}/> Upload Tests
                 </button>
@@ -905,6 +933,7 @@ const AdminDashboard = () => {
                 {activeTab === 'overview' && <Overview />}
                 {activeTab === 'videos' && <ManageVideos />}
                 {activeTab === 'classes' && <ManageClasses />}
+                {activeTab === 'subjects' && <ManageSubjects />}
                 {activeTab === 'tests' && <ManageTests />}
                 {activeTab === 'news' && <ManageNews />}
                 {activeTab === 'admin-access' && <ManageAdminAccess />}

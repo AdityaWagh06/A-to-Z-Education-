@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, User, BookOpen, Home, BarChart, ChevronDown } from 'lucide-react';
+import { LogOut, User, BookOpen, Home, BarChart, ChevronDown, FileText } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import AuthModal from './AuthModal';
 
@@ -61,6 +61,9 @@ const Navbar = () => {
                                     <Link to="/student/subjects" className="text-gray-600 hover:text-primary font-medium flex items-center gap-1 transition-colors">
                                         <BookOpen size={18}/> Subjects
                                     </Link>
+                                    <Link to="/student/tests" className="text-gray-600 hover:text-primary font-medium flex items-center gap-1 transition-colors">
+                                        <FileText size={18}/> Tests
+                                    </Link>
                                     <Link to="/student/profile" className="text-gray-600 hover:text-primary font-medium flex items-center gap-1 transition-colors">
                                         <User size={18}/> Profile
                                     </Link>
@@ -119,6 +122,16 @@ const Navbar = () => {
                                                     >
                                                         <User size={16} className="text-gray-400 group-hover:text-primary transition-colors" /> 
                                                         My Profile
+                                                    </Link>
+                                                )}
+                                                {user?.role === 'student' && (
+                                                    <Link
+                                                        to="/student/tests"
+                                                        className="px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-primary flex items-center gap-3 transition-colors group"
+                                                        onClick={() => setIsDropdownOpen(false)}
+                                                    >
+                                                        <FileText size={16} className="text-gray-400 group-hover:text-primary transition-colors" />
+                                                        Tests
                                                     </Link>
                                                 )}
                                                 
