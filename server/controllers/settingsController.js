@@ -130,8 +130,135 @@ const sendBroadcastEmail = async (req, res) => {
     }
 };
 
+const getStudentPurchases = async (_req, res) => {
+    try {
+        const supabase = getSupabaseAdmin();
+
+        const [{ data: users, error: usersError }, { data: tests, error: testsError }] = await Promise.all([
+            supabase
+                .from('users')
+                .select('id, name, email, purchased_tests')
+                .eq('role', 'student')
+                .order('name', { ascending: true }),
+            supabase
+                .from('tests')
+                .select('id, title, subject, price, is_locked')
+                .order('created_at', { ascending: false })
+        ]);
+
+        if (usersError) throw usersError;
+        if (testsError) throw testsError;
+
+        return res.json({
+            users: (users || []).map((u) => ({
+                id: u.id,
+                name: u.name,
+                email: u.email,
+                purchasedTests: u.purchased_tests || []
+            })),
+            tests: (tests || []).map((t) => ({
+                id: t.id,
+                title: t.title,
+                subject: t.subject,
+                price: Number(t.price || 0),
+                isLocked: Boolean(t.is_locked)
+            }))
+        });
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+};
+
+const updateStudentPurchases = async (req, res) => {
+    const { userId } = req.params;
+    const { purchasedTests } = req.body;
+
+    if (!Array.isArray(purchasedTests)) {
+        return res.status(400).json({ message: 'purchasedTests must be an array' });
+    }
+
+    try {
+        const supabase = getSupabaseAdmin();
+        const normalized = [...new Set(purchasedTests.filter((id) => typeof id === 'string' && id.trim()))];
+
+        const { data, error } = await supabase
+            .from('users')
+            .update({ purchased_tests: normalized })
+            .eq('id', userId)
+            .eq('role', 'student')
+            .select('id, name, email, purchased_tests')
+            .single();
+
+        if (error) throw error;
+
+        return res.json({
+            id: data.id,
+            name: data.name,
+            email: data.email,
+            purchasedTests: data.purchased_tests || []
+        });
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+};
+
+const getAdminOverviewStats = async (_req, res) => {
+    try {
+        const supabase = getSupabaseAdmin();
+
+        const [
+            studentsCountResult,
+            videosCountResult,
+            testsCountResult,
+            paidTestsCountResult,
+            freeTestsCountResult,
+            purchasesCountResult,
+            paymentsResult,
+        ] = await Promise.all([
+            supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'student'),
+            supabase.from('videos').select('id', { count: 'exact', head: true }),
+            supabase.from('tests').select('id', { count: 'exact', head: true }),
+            supabase.from('tests').select('id', { count: 'exact', head: true }).gt('price', 0),
+            supabase.from('tests').select('id', { count: 'exact', head: true }).eq('price', 0),
+            supabase.from('payments').select('id', { count: 'exact', head: true }).eq('status', 'completed'),
+            supabase.from('payments').select('amount').eq('status', 'completed'),
+        ]);
+
+        const possibleErrors = [
+            studentsCountResult.error,
+            videosCountResult.error,
+            testsCountResult.error,
+            paidTestsCountResult.error,
+            freeTestsCountResult.error,
+            purchasesCountResult.error,
+            paymentsResult.error,
+        ].filter(Boolean);
+
+        if (possibleErrors.length > 0) {
+            throw possibleErrors[0];
+        }
+
+        const revenue = (paymentsResult.data || []).reduce((sum, row) => sum + Number(row.amount || 0), 0);
+
+        return res.json({
+            students: studentsCountResult.count || 0,
+            videos: videosCountResult.count || 0,
+            tests: testsCountResult.count || 0,
+            paidTests: paidTestsCountResult.count || 0,
+            freeTests: freeTestsCountResult.count || 0,
+            completedPurchases: purchasesCountResult.count || 0,
+            revenue,
+        });
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     getAdminEmailSettings,
     updateAdminEmailSettings,
     sendBroadcastEmail,
+    getStudentPurchases,
+    updateStudentPurchases,
+    getAdminOverviewStats,
 };

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { User, Video, FileText, Plus, BarChart, ShieldCheck, Trash2, Edit2, Book, Bell, Mail } from 'lucide-react';
+import { User, Video, FileText, Plus, BarChart, ShieldCheck, Trash2, Edit2, Book, Bell, Mail, Wallet } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -15,6 +15,37 @@ const AdminDashboard = () => {
     const [activeTab, setActiveTab] = useState('overview');
     const [feedback, setFeedback] = useState(null);
     const feedbackTimeoutRef = useRef(null);
+    const [overviewStats, setOverviewStats] = useState({
+        students: 0,
+        videos: 0,
+        tests: 0,
+        paidTests: 0,
+        freeTests: 0,
+        completedPurchases: 0,
+        revenue: 0,
+    });
+    const [overviewLoading, setOverviewLoading] = useState(false);
+
+    const fetchOverviewStats = async () => {
+        try {
+            setOverviewLoading(true);
+            const response = await axios.get(`${API_URL}/api/settings/overview-stats`, getAuthConfig());
+            setOverviewStats({
+                students: Number(response.data?.students || 0),
+                videos: Number(response.data?.videos || 0),
+                tests: Number(response.data?.tests || 0),
+                paidTests: Number(response.data?.paidTests || 0),
+                freeTests: Number(response.data?.freeTests || 0),
+                completedPurchases: Number(response.data?.completedPurchases || 0),
+                revenue: Number(response.data?.revenue || 0),
+            });
+        } catch (err) {
+            console.error('Error loading overview stats:', err);
+            notify('error', 'Could not load overview stats.');
+        } finally {
+            setOverviewLoading(false);
+        }
+    };
 
     const notify = (type, text) => {
         setFeedback({ type, text });
@@ -25,7 +56,7 @@ const AdminDashboard = () => {
     };
 
     useEffect(() => {
-        // Fetch stats if API available
+        fetchOverviewStats();
         return () => {
             if (feedbackTimeoutRef.current) {
                 clearTimeout(feedbackTimeoutRef.current);
@@ -33,28 +64,63 @@ const AdminDashboard = () => {
         };
     }, []);
 
+    useEffect(() => {
+        if (activeTab === 'overview') {
+            fetchOverviewStats();
+        }
+    }, [activeTab]);
+
     const Overview = () => (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-blue-500 text-white p-6 rounded-card shadow-lg flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold opacity-80">Total Students</h3>
-                  <p className="text-4xl font-bold mt-2">1,234</p>
-                </div>
-                <User size={48} className="opacity-50" />
+        <div className="space-y-6 mb-8">
+            <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-gray-800">Performance Dashboard</h2>
+                <button
+                    type="button"
+                    onClick={fetchOverviewStats}
+                    disabled={overviewLoading}
+                    className="px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                >
+                    {overviewLoading ? 'Refreshing...' : 'Refresh'}
+                </button>
             </div>
-             <div className="bg-green-500 text-white p-6 rounded-card shadow-lg flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold opacity-80">Videos Uploaded</h3>
-                  <p className="text-4xl font-bold mt-2">456</p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-blue-500 text-white p-6 rounded-card shadow-lg flex items-center justify-between">
+                    <div>
+                    <h3 className="text-lg font-semibold opacity-80">Total Students</h3>
+                    <p className="text-4xl font-bold mt-2">{overviewStats.students.toLocaleString()}</p>
+                    </div>
+                    <User size={48} className="opacity-50" />
                 </div>
-                <Video size={48} className="opacity-50" />
+                <div className="bg-green-500 text-white p-6 rounded-card shadow-lg flex items-center justify-between">
+                    <div>
+                    <h3 className="text-lg font-semibold opacity-80">Videos Uploaded</h3>
+                    <p className="text-4xl font-bold mt-2">{overviewStats.videos.toLocaleString()}</p>
+                    </div>
+                    <Video size={48} className="opacity-50" />
+                </div>
+                <div className="bg-purple-500 text-white p-6 rounded-card shadow-lg flex items-center justify-between">
+                    <div>
+                    <h3 className="text-lg font-semibold opacity-80">Tests Created</h3>
+                    <p className="text-4xl font-bold mt-2">{overviewStats.tests.toLocaleString()}</p>
+                    </div>
+                    <FileText size={48} className="opacity-50" />
+                </div>
             </div>
-             <div className="bg-purple-500 text-white p-6 rounded-card shadow-lg flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold opacity-80">Tests Created</h3>
-                  <p className="text-4xl font-bold mt-2">89</p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-amber-500 text-white p-6 rounded-card shadow-lg">
+                    <h3 className="text-lg font-semibold opacity-80">Paid Tests</h3>
+                    <p className="text-4xl font-bold mt-2">{overviewStats.paidTests.toLocaleString()}</p>
                 </div>
-                 <FileText size={48} className="opacity-50" />
+                <div className="bg-teal-500 text-white p-6 rounded-card shadow-lg">
+                    <h3 className="text-lg font-semibold opacity-80">Completed Purchases</h3>
+                    <p className="text-4xl font-bold mt-2">{overviewStats.completedPurchases.toLocaleString()}</p>
+                </div>
+                <div className="bg-rose-500 text-white p-6 rounded-card shadow-lg">
+                    <h3 className="text-lg font-semibold opacity-80">Revenue</h3>
+                    <p className="text-4xl font-bold mt-2">Rs {overviewStats.revenue.toLocaleString()}</p>
+                </div>
             </div>
         </div>
     );
@@ -309,15 +375,20 @@ const AdminDashboard = () => {
             subject: 'maths',
             standard: 2,
             price: 0,
-            isLocked: false
+            isLocked: false,
+            accessType: 'free'
         });
         const [files, setFiles] = useState({ pdf: null, answerSheet: null });
         const [uploading, setUploading] = useState(false);
         const [tests, setTests] = useState([]);
         const [editingId, setEditingId] = useState(null);
+        const [paidBoxes, setPaidBoxes] = useState([]);
+        const [boxForm, setBoxForm] = useState({ standard: 2, title: '', description: '', amount: '' });
+        const [boxSaving, setBoxSaving] = useState(false);
 
         useEffect(() => {
             fetchTests();
+            fetchPaidBoxes();
         }, []);
 
         const fetchTests = async () => {
@@ -326,6 +397,15 @@ const AdminDashboard = () => {
                 setTests(data);
             } catch (error) {
                 console.error('Error fetching tests:', error);
+            }
+        };
+
+        const fetchPaidBoxes = async () => {
+            try {
+                const { data } = await axios.get(`${API_URL}/api/tests/paid-standard-boxes`, getAuthConfig());
+                setPaidBoxes(Array.isArray(data) ? data : []);
+            } catch (error) {
+                console.error('Error fetching paid standard boxes:', error);
             }
         };
 
@@ -349,16 +429,18 @@ const AdminDashboard = () => {
                 if (editingId) {
                     await axios.put(`${API_URL}/api/tests/${editingId}`, {
                         ...formData,
-                        isLocked: formData.price > 0
+                        standard: Number(formData.standard),
+                        isLocked: formData.accessType === 'paid',
+                        price: formData.accessType === 'paid' ? Number(formData.price || 0) : 0
                     }, config);
                     notify('success', 'Test updated.');
                 } else {
                     const data = new FormData();
                     data.append('title', formData.title);
                     data.append('subject', formData.subject);
-                    data.append('standard', formData.standard);
-                    data.append('price', formData.price);
-                    data.append('isLocked', formData.price > 0);
+                    data.append('standard', Number(formData.standard));
+                    data.append('price', formData.accessType === 'paid' ? Number(formData.price || 0) : 0);
+                    data.append('isLocked', formData.accessType === 'paid');
                     data.append('pdf', files.pdf);
                     if (files.answerSheet) {
                         data.append('answerSheet', files.answerSheet);
@@ -391,7 +473,8 @@ const AdminDashboard = () => {
                 subject: 'maths',
                 standard: 2,
                 price: 0,
-                isLocked: false
+                isLocked: false,
+                accessType: 'free'
             });
             setFiles({ pdf: null, answerSheet: null });
             setEditingId(null);
@@ -405,12 +488,54 @@ const AdminDashboard = () => {
             setFormData({
                 title: test.title,
                 subject: test.subject,
-                standard: test.standard,
+                standard: Number(test.standard || 2),
                 price: test.price,
-                isLocked: test.isLocked
+                isLocked: test.isLocked,
+                accessType: test.isLocked ? 'paid' : 'free'
             });
             setEditingId(test._id);
             window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        const handleSavePaidBox = async (e) => {
+            e.preventDefault();
+            const amount = Number(boxForm.amount);
+
+            if (!Number.isFinite(amount) || amount <= 0) {
+                notify('error', 'Please enter a valid amount greater than 0 for paid box.');
+                return;
+            }
+
+            try {
+                setBoxSaving(true);
+                await axios.post(`${API_URL}/api/tests/paid-standard-boxes`, {
+                    standard: Number(boxForm.standard),
+                    title: boxForm.title?.trim(),
+                    description: boxForm.description?.trim(),
+                    amount,
+                    isActive: true,
+                }, getAuthConfig());
+
+                notify('success', `Paid box saved for Standard ${boxForm.standard}.`);
+                setBoxForm({ standard: 2, title: '', description: '', amount: '' });
+                fetchPaidBoxes();
+            } catch (err) {
+                console.error(err);
+                notify('error', err?.response?.data?.message || 'Could not save paid box.');
+            } finally {
+                setBoxSaving(false);
+            }
+        };
+
+        const handleDeletePaidBox = async (id) => {
+            try {
+                await axios.delete(`${API_URL}/api/tests/paid-standard-boxes/${id}`, getAuthConfig());
+                notify('success', 'Paid box deleted.');
+                fetchPaidBoxes();
+            } catch (err) {
+                console.error(err);
+                notify('error', err?.response?.data?.message || 'Could not delete paid box.');
+            }
         };
 
         const handleDelete = async (id) => {
@@ -448,7 +573,7 @@ const AdminDashboard = () => {
                                 onChange={(e) => setFormData({ ...formData, standard: Number(e.target.value) })}
                                 className="w-full border rounded-lg p-2"
                             >
-                                {[...Array(9)].map((_, i) => <option key={i+2} value={i+2}>{i+2}</option>)}
+                                {[...Array(9)].map((_, i) => <option key={i+2} value={i+2}>Standard {i+2}</option>)}
                             </select>
                         </div>
                         <div>
@@ -464,18 +589,38 @@ const AdminDashboard = () => {
                                 <option value="intelligence">Intelligence Test</option>
                             </select>
                         </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Test Type</label>
+                            <select
+                                value={formData.accessType}
+                                onChange={(e) => {
+                                    const accessType = e.target.value;
+                                    setFormData({
+                                        ...formData,
+                                        accessType,
+                                        price: accessType === 'free' ? 0 : (formData.price > 0 ? formData.price : 1),
+                                        isLocked: accessType === 'paid'
+                                    });
+                                }}
+                                className="w-full border rounded-lg p-2"
+                            >
+                                <option value="free">Free Test</option>
+                                <option value="paid">Paid Test</option>
+                            </select>
+                        </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Price (0 for free)</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
                             <input
                                 type="number"
                                 min="0"
                                 value={formData.price}
                                 onChange={(e) => setFormData({ ...formData, price: Number(e.target.value), isLocked: Number(e.target.value) > 0 })}
+                                disabled={formData.accessType === 'free'}
                                 className="w-full border rounded-lg p-2"
-                                placeholder="Price"
+                                placeholder={formData.accessType === 'free' ? 'Free Test (Price locked to 0)' : 'Price'}
                             />
                         </div>
                     </div>
@@ -539,10 +684,10 @@ const AdminDashboard = () => {
                                         <div>
                                             <h4 className="font-bold text-gray-900">{test.title}</h4>
                                             <div className="flex gap-2 text-xs mt-1">
-                                                <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded capitalize">{test.subject}</span>
                                                 <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded">Std {test.standard}</span>
-                                                <span className={`px-2 py-0.5 rounded ${test.price > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
-                                                    {test.price > 0 ? `₹${test.price}` : 'Free'}
+                                                <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded capitalize">{test.subject}</span>
+                                                <span className={`px-2 py-0.5 rounded ${test.isLocked ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
+                                                    {test.isLocked ? 'Paid (Box)' : 'Free'}
                                                 </span>
                                             </div>
                                         </div>
@@ -561,6 +706,80 @@ const AdminDashboard = () => {
                                             <Trash2 size={18} />
                                         </button>
                                     </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                <div className="mt-8 border-t pt-6">
+                    <h3 className="text-xl font-bold mb-4">Paid Standard Boxes</h3>
+                    <form onSubmit={handleSavePaidBox} className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+                        <select
+                            value={boxForm.standard}
+                            onChange={(e) => setBoxForm({ ...boxForm, standard: Number(e.target.value) })}
+                            className="border rounded-lg p-2"
+                        >
+                            {[...Array(9)].map((_, i) => <option key={i+2} value={i+2}>Standard {i+2}</option>)}
+                        </select>
+                        <input
+                            type="text"
+                            value={boxForm.title}
+                            onChange={(e) => setBoxForm({ ...boxForm, title: e.target.value })}
+                            className="border rounded-lg p-2"
+                            placeholder="Box title (optional)"
+                        />
+                        <input
+                            type="number"
+                            min="1"
+                            value={boxForm.amount}
+                            onChange={(e) => setBoxForm({ ...boxForm, amount: e.target.value })}
+                            className="border rounded-lg p-2"
+                            placeholder="Amount"
+                            required
+                        />
+                        <button
+                            type="submit"
+                            disabled={boxSaving}
+                            className="bg-yellow-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-yellow-600 disabled:opacity-60"
+                        >
+                            {boxSaving ? 'Saving...' : 'Save Box'}
+                        </button>
+                    </form>
+
+                    <textarea
+                        value={boxForm.description}
+                        onChange={(e) => setBoxForm({ ...boxForm, description: e.target.value })}
+                        className="w-full border rounded-lg p-2 mb-4"
+                        rows={2}
+                        placeholder="Description (optional)"
+                    />
+
+                    {paidBoxes.length === 0 ? (
+                        <p className="text-gray-500">No paid standard boxes created yet.</p>
+                    ) : (
+                        <div className="space-y-3">
+                            {paidBoxes.map((box) => (
+                                <div key={box._id} className="border p-4 rounded-lg bg-yellow-50 space-y-3">
+                                    <div className="flex items-center justify-between">
+                                    <div>
+                                        <h4 className="font-bold text-gray-900">Standard {box.standard} - {box.title || `Premium Box`}</h4>
+                                        <p className="text-sm text-gray-600">{box.description || 'No description provided.'}</p>
+                                        <p className="text-xs text-yellow-700 font-semibold mt-1">Price: ₹{box.amount} | Paid Tests In This Standard: {box.testsCount || 0}</p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => handleDeletePaidBox(box._id)}
+                                        className="p-2 text-red-600 hover:bg-red-50 rounded-md transition"
+                                        title="Delete paid box"
+                                    >
+                                        <Trash2 size={18} />
+                                    </button>
+                                    </div>
+                                    </div>
+                                    <p className="text-sm text-gray-700 bg-white border rounded-lg p-3">
+                                        All paid tests uploaded for Standard {box.standard} are automatically included in this box.
+                                    </p>
                                 </div>
                             ))}
                         </div>
@@ -892,6 +1111,140 @@ const AdminDashboard = () => {
         );
     };
 
+    const ManageStudentPurchases = () => {
+        const [users, setUsers] = useState([]);
+        const [tests, setTests] = useState([]);
+        const [selectedUserId, setSelectedUserId] = useState('');
+        const [selectedPurchases, setSelectedPurchases] = useState([]);
+        const [saving, setSaving] = useState(false);
+
+        useEffect(() => {
+            const loadData = async () => {
+                try {
+                    const { data } = await axios.get(`${API_URL}/api/settings/student-purchases`, getAuthConfig());
+                    setUsers(data.users || []);
+                    setTests((data.tests || []).filter((t) => Boolean(t.isLocked) || Number(t.price) > 0));
+
+                    if (data.users?.length) {
+                        setSelectedUserId(data.users[0].id);
+                        setSelectedPurchases(data.users[0].purchasedTests || []);
+                    }
+                } catch (error) {
+                    console.error(error);
+                    notify('error', 'Could not load student purchase data.');
+                }
+            };
+
+            loadData();
+        }, []);
+
+        const handleSelectUser = (userId) => {
+            setSelectedUserId(userId);
+            const user = users.find((u) => u.id === userId);
+            setSelectedPurchases(user?.purchasedTests || []);
+        };
+
+        const togglePurchase = (testId) => {
+            setSelectedPurchases((prev) => (
+                prev.includes(testId)
+                    ? prev.filter((id) => id !== testId)
+                    : [...prev, testId]
+            ));
+        };
+
+        const savePurchases = async () => {
+            if (!selectedUserId) return;
+
+            try {
+                setSaving(true);
+                const { data } = await axios.put(
+                    `${API_URL}/api/settings/student-purchases/${selectedUserId}`,
+                    { purchasedTests: selectedPurchases },
+                    getAuthConfig()
+                );
+
+                setUsers((prev) => prev.map((u) => (
+                    u.id === selectedUserId
+                        ? { ...u, purchasedTests: data.purchasedTests || [] }
+                        : u
+                )));
+
+                notify('success', 'Student purchases updated.');
+            } catch (error) {
+                console.error(error);
+                notify('error', error?.response?.data?.message || 'Could not save purchases.');
+            } finally {
+                setSaving(false);
+            }
+        };
+
+        const selectedUser = users.find((u) => u.id === selectedUserId);
+
+        return (
+            <div className="bg-white p-6 rounded-card shadow-md max-w-5xl mx-auto">
+                <h2 className="text-2xl font-bold mb-2">Student Test Purchases</h2>
+                <p className="text-gray-600 mb-6">Manually add/remove paid tests for students in case of missed payment callbacks.</p>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Select Student</label>
+                        <select
+                            value={selectedUserId}
+                            onChange={(e) => handleSelectUser(e.target.value)}
+                            className="w-full border rounded-lg p-2"
+                        >
+                            {users.map((u) => (
+                                <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="rounded-lg border bg-gray-50 p-3 text-sm">
+                        <p className="text-gray-500">Selected</p>
+                        <p className="font-semibold text-gray-800 truncate">{selectedUser?.name || '-'}</p>
+                        <p className="text-gray-600 truncate">{selectedUser?.email || '-'}</p>
+                    </div>
+                </div>
+
+                <div className="border rounded-lg max-h-[420px] overflow-auto">
+                    {tests.length === 0 ? (
+                        <div className="p-6 text-center text-gray-500">No paid tests found yet.</div>
+                    ) : (
+                        <div className="divide-y">
+                            {tests.map((test) => {
+                                const checked = selectedPurchases.includes(test.id);
+                                return (
+                                    <label key={test.id} className="flex items-center gap-3 p-4 hover:bg-gray-50 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={checked}
+                                            onChange={() => togglePurchase(test.id)}
+                                            className="h-4 w-4"
+                                        />
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-medium text-gray-800 truncate">{test.title}</p>
+                                            <p className="text-xs text-gray-500 capitalize">{test.subject}</p>
+                                        </div>
+                                        <span className="text-xs font-bold bg-yellow-100 text-yellow-800 px-2 py-1 rounded">₹{test.price}</span>
+                                    </label>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+
+                <div className="mt-5 flex justify-end">
+                    <button
+                        onClick={savePurchases}
+                        disabled={saving || !selectedUserId}
+                        className="bg-primary text-white px-5 py-2 rounded-lg disabled:opacity-60"
+                    >
+                        {saving ? 'Saving...' : 'Save Purchase Access'}
+                    </button>
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="flex h-[calc(100vh-64px)] bg-gray-100">
              {/* Admin Sidebar */}
@@ -920,6 +1273,9 @@ const AdminDashboard = () => {
                 <button onClick={() => setActiveTab('broadcast')} className={`w-full text-left p-3 rounded flex items-center gap-3 ${activeTab === 'broadcast' ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>
                     <Mail size={20}/> Broadcast Email
                 </button>
+                <button onClick={() => setActiveTab('student-purchases')} className={`w-full text-left p-3 rounded flex items-center gap-3 ${activeTab === 'student-purchases' ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>
+                    <Wallet size={20}/> Student Purchases
+                </button>
             </div>
 
             {/* Content */}
@@ -938,6 +1294,7 @@ const AdminDashboard = () => {
                 {activeTab === 'news' && <ManageNews />}
                 {activeTab === 'admin-access' && <ManageAdminAccess />}
                 {activeTab === 'broadcast' && <BroadcastEmail />}
+                {activeTab === 'student-purchases' && <ManageStudentPurchases />}
             </div>
         </div>
     );

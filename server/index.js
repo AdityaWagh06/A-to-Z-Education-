@@ -1,6 +1,8 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const fileUpload = require('express-fileupload');
 const path = require('path');
 const authRoutes = require('./routes/authRoutes');
@@ -14,6 +16,7 @@ const standardRoutes = require('./routes/standardRoutes');
 dotenv.config();
 
 const app = express();
+app.disable('x-powered-by');
 
 const requiredEnvVars = ['JWT_SECRET', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];
 const missingEnvVars = requiredEnvVars.filter((key) => !process.env[key]);
@@ -29,8 +32,26 @@ if (process.env.NODE_ENV === 'production' && process.env.ALLOW_DEV_GOOGLE_BYPASS
 
 app.use(fileUpload({
     createParentPath: true,
+    safeFileNames: true,
+    preserveExtension: true,
+    abortOnLimit: true,
+    useTempFiles: false,
     limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
 }));
+
+app.use(helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
+
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 300,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: 'Too many requests. Please try again later.' }
+});
+
+app.use('/api', apiLimiter);
 
 const allowedOrigins = [
     process.env.CLIENT_ORIGIN,
@@ -49,7 +70,7 @@ app.use(cors({
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/videos', videoRoutes);

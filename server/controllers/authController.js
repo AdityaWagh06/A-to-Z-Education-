@@ -169,6 +169,7 @@ const googleLogin = async (req, res) => {
             standard: user.standard,
             progress: user.progress || buildProgress(),
             purchasedTests: user.purchased_tests || [],
+            purchasedStandardBoxes: user.purchased_standard_boxes || [],
             token: generateToken({ id: user.id, role: user.role || 'student' }),
             picture: picture || user.picture,
             mobile_no: user.mobile_no
@@ -193,6 +194,7 @@ const getUserProfile = async (req, res) => {
             standard: req.user.standard,
             progress: req.user.progress || buildProgress(),
             purchasedTests: req.user.purchased_tests || [],
+            purchasedStandardBoxes: req.user.purchased_standard_boxes || [],
             picture: req.user.picture,
             mobile_no: req.user.mobile_no
         });

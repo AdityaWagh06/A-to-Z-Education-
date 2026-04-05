@@ -3,7 +3,6 @@ import { useAuth } from './context/AuthContext';
 import Landing from './pages/Landing';
 import StudentHome from './pages/StudentHome';
 import Subjects from './pages/Subjects';
-import StudentTests from './pages/StudentTests';
 import Lessons from './pages/Lessons';
 import Test from './pages/Test';
 import Profile from './pages/Profile';
@@ -28,7 +27,8 @@ function App() {
           
           <Route path="/student/home" element={<ProtectedRoute><StudentHome /></ProtectedRoute>} />
           <Route path="/student/subjects" element={<ProtectedRoute><Subjects /></ProtectedRoute>} />
-          <Route path="/student/tests" element={<ProtectedRoute><StudentTests /></ProtectedRoute>} />
+          <Route path="/student/tests" element={<ProtectedRoute><Test /></ProtectedRoute>} />
+          <Route path="/student/tests/:standard" element={<ProtectedRoute><Test /></ProtectedRoute>} />
           <Route path="/student/lessons/:subject" element={<ProtectedRoute><Lessons /></ProtectedRoute>} />
           <Route path="/student/test/:subject" element={<ProtectedRoute><Test /></ProtectedRoute>} />
           <Route path="/student/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />

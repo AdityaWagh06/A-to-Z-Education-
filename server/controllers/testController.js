@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const { getSupabaseAdmin } = require('../config/supabase');
 
 const buildFileUrl = (req, relativePath) => encodeURI(`${req.protocol}://${req.get('host')}${relativePath}`);
+const sanitizeUploadName = (fileName) => path.basename(String(fileName || 'file')).replace(/[^a-zA-Z0-9._-]/g, '_');
 
 const getOptionalAuthUser = async (req, supabase) => {
     try {
@@ -14,7 +15,7 @@ const getOptionalAuthUser = async (req, supabase) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const { data, error } = await supabase
             .from('users')
-            .select('id, role, purchased_tests')
+            .select('id, role, purchased_tests, purchased_standard_boxes')
             .eq('id', decoded.id)
             .maybeSingle();
 
@@ -34,6 +35,7 @@ const getTests = async (req, res) => {
         const supabase = getSupabaseAdmin();
         const authUser = await getOptionalAuthUser(req, supabase);
         const purchasedSet = new Set(authUser?.purchased_tests || []);
+        const purchasedStandardSet = new Set((authUser?.purchased_standard_boxes || []).map((value) => Number(value)));
         const isAdmin = authUser?.role === 'admin';
 
         let query = supabase.from('tests').select('*').order('created_at', { ascending: false });
@@ -45,8 +47,9 @@ const getTests = async (req, res) => {
         if (error) throw error;
 
         return res.json((data || []).map((t) => {
-            const isPurchased = purchasedSet.has(t.id);
-            const hideContent = t.is_locked && Number(t.price) > 0 && !isPurchased && !isAdmin;
+            const isStandardPurchased = purchasedStandardSet.has(Number(t.standard));
+            const isPurchased = purchasedSet.has(t.id) || isStandardPurchased;
+            const hideContent = t.is_locked && !isPurchased && !isAdmin;
 
             return {
                 _id: t.id,
@@ -59,6 +62,7 @@ const getTests = async (req, res) => {
                 hasPdf: Boolean(t.pdf_path),
                 hasAnswerSheet: Boolean(t.answer_sheet_path),
                 isPurchased,
+                isStandardPurchased,
                 questions: t.questions || [],
                 timeLimit: t.time_limit,
                 isLocked: t.is_locked,
@@ -85,15 +89,17 @@ const getTestById = async (req, res) => {
         if (error || !test) return res.status(404).json({ message: 'Test not found' });
 
         // Check if locked and unpaid
-        if (test.is_locked && Number(test.price) > 0) {
+        if (test.is_locked) {
             // Check if user purchased
              const { data: user } = await supabase
                 .from('users')
-                .select('purchased_tests')
+                .select('purchased_tests, purchased_standard_boxes')
                      .eq('id', req.user.id)
                 .single();
             
-            const purchased = (user?.purchased_tests || []).includes(test.id);
+            const purchasedByTest = (user?.purchased_tests || []).includes(test.id);
+            const purchasedByStandardBox = (user?.purchased_standard_boxes || []).includes(Number(test.standard));
+            const purchased = purchasedByTest || purchasedByStandardBox;
             if (!purchased && req.user.role !== 'admin') {
                 return res.status(403).json({ message: 'Test is locked. Purchase required.' });
             }
@@ -124,7 +130,7 @@ const createTest = async (req, res) => {
         const answerSheetFile = req.files.answerSheet;
 
         // Save PDF locally
-        const pdfName = `test-${Date.now()}-${pdfFile.name}`;
+        const pdfName = `test-${Date.now()}-${sanitizeUploadName(pdfFile.name)}`;
         const pdfPath = path.join(__dirname, '../uploads/tests', pdfName);
         
         // Ensure directory exists
@@ -138,7 +144,7 @@ const createTest = async (req, res) => {
 
         let relativeAnswerSheetPath = null;
         if (answerSheetFile) {
-            const answerName = `answers-${Date.now()}-${answerSheetFile.name}`;
+            const answerName = `answers-${Date.now()}-${sanitizeUploadName(answerSheetFile.name)}`;
             const answerPath = path.join(__dirname, '../uploads/tests', answerName);
             await answerSheetFile.mv(answerPath);
             relativeAnswerSheetPath = `/uploads/tests/${answerName}`;
@@ -261,4 +267,105 @@ const updateTest = async (req, res) => {
     }
 };
 
-module.exports = { getTests, getTestById, createTest, submitTest, deleteTest, updateTest };
+const getPaidStandardBoxes = async (req, res) => {
+    try {
+        const supabase = getSupabaseAdmin();
+        const authUser = await getOptionalAuthUser(req, supabase);
+        const purchasedStandardSet = new Set(authUser?.purchased_standard_boxes || []);
+
+        const [{ data: boxes, error: boxesError }, { data: paidTests, error: paidTestsError }] = await Promise.all([
+            supabase
+                .from('paid_standard_boxes')
+                .select('*')
+                .order('standard', { ascending: true }),
+            supabase
+                .from('tests')
+                .select('id, standard')
+                .eq('is_locked', true),
+        ]);
+
+        if (boxesError) throw boxesError;
+        if (paidTestsError) throw paidTestsError;
+
+        const testsByStandard = {};
+        for (const test of (paidTests || [])) {
+            const standardValue = Number(test.standard);
+            if (!testsByStandard[standardValue]) testsByStandard[standardValue] = [];
+            testsByStandard[standardValue].push(test.id);
+        }
+
+        return res.json((boxes || []).map((b) => ({
+            _id: b.id,
+            standard: Number(b.standard),
+            title: b.title,
+            description: b.description,
+            amount: Number(b.amount || 0),
+            isActive: Boolean(b.is_active),
+            assignedTestIds: testsByStandard[Number(b.standard)] || [],
+            testsCount: (testsByStandard[Number(b.standard)] || []).length,
+            isPurchased: purchasedStandardSet.has(Number(b.standard)),
+            createdAt: b.created_at,
+        })));
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+};
+
+const upsertPaidStandardBox = async (req, res) => {
+    try {
+        const { standard, amount, title, description, isActive = true } = req.body;
+
+        const standardNumber = Number(standard);
+        const amountNumber = Number(amount);
+
+        if (!Number.isInteger(standardNumber) || standardNumber < 2 || standardNumber > 10) {
+            return res.status(400).json({ message: 'Standard must be between 2 and 10.' });
+        }
+
+        if (!Number.isFinite(amountNumber) || amountNumber <= 0) {
+            return res.status(400).json({ message: 'Amount must be greater than 0.' });
+        }
+
+        const supabase = getSupabaseAdmin();
+        const { data, error } = await supabase
+            .from('paid_standard_boxes')
+            .upsert([{
+                standard: standardNumber,
+                amount: amountNumber,
+                title: title || `Standard ${standardNumber} Premium Box`,
+                description: description || null,
+                is_active: isActive,
+            }], { onConflict: 'standard' })
+            .select('*')
+            .single();
+
+        if (error) throw error;
+        return res.json(data);
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+};
+
+const deletePaidStandardBox = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const supabase = getSupabaseAdmin();
+        const { error } = await supabase.from('paid_standard_boxes').delete().eq('id', id);
+        if (error) throw error;
+        return res.json({ message: 'Paid standard box deleted.' });
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+};
+
+module.exports = {
+    getTests,
+    getTestById,
+    createTest,
+    submitTest,
+    deleteTest,
+    updateTest,
+    getPaidStandardBoxes,
+    upsertPaidStandardBox,
+    deletePaidStandardBox,
+};
