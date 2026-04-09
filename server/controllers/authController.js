@@ -41,7 +41,7 @@ const isMissingColumnError = (error, columnName) => {
 // @route   POST /api/auth/google
 // @access  Public
 const googleLogin = async (req, res) => {
-    const { token, name: providedName, mobile } = req.body;
+    const { token, name: providedName, mobile, standard } = req.body;
 
     try {
         let name;
@@ -90,6 +90,8 @@ const googleLogin = async (req, res) => {
         }
 
         const resolvedRole = await getRoleForEmail(email);
+        const parsedStandard = Number(standard);
+        const hasValidStandard = Number.isInteger(parsedStandard) && parsedStandard > 0;
 
         const supabase = getSupabaseAdmin();
         const { data: existing, error: findError } = await supabase
@@ -105,6 +107,7 @@ const googleLogin = async (req, res) => {
             const updates = { google_id: googleId, role: resolvedRole, picture, last_login_at: new Date().toISOString() };
             if (name) updates.name = name;
             if (mobile) updates.mobile_no = mobile;
+            if (hasValidStandard) updates.standard = parsedStandard;
 
             let { data: updated, error: updateError } = await supabase
                 .from('users')
@@ -137,6 +140,7 @@ const googleLogin = async (req, res) => {
                 purchased_tests: [],
                 picture,
                 mobile_no: mobile,
+                standard: hasValidStandard ? parsedStandard : null,
                 last_login_at: new Date().toISOString()
             };
 
@@ -207,12 +211,16 @@ const getUserProfile = async (req, res) => {
 // @route   PUT /api/auth/profile
 // @access  Private
 const updateUserProfile = async (req, res) => {
+    const parsedStandard = Number(req.body.standard);
+    const hasValidStandard = Number.isInteger(parsedStandard) && parsedStandard > 0;
+
     const supabase = getSupabaseAdmin();
     const { data: updated, error } = await supabase
         .from('users')
         .update({
             name: req.body.name || req.user.name,
-            standard: req.body.standard || req.user.standard
+            standard: hasValidStandard ? parsedStandard : req.user.standard,
+            mobile_no: req.body.mobile || req.user.mobile_no
         })
         .eq('id', req.user.id)
         .select('*')
@@ -228,12 +236,42 @@ const updateUserProfile = async (req, res) => {
         email: updated.email,
         role: updated.role || 'student',
         standard: updated.standard,
+        mobile_no: updated.mobile_no,
         token: generateToken({ id: updated.id, role: updated.role || 'student' }),
     });
+};
+
+// @desc    Delete user account
+// @route   DELETE /api/auth/account
+// @access  Private
+const deleteUserAccount = async (req, res) => {
+    const { confirmText, emailConfirm } = req.body || {};
+
+    if (String(confirmText || '').trim().toUpperCase() !== 'DELETE') {
+        return res.status(400).json({ message: 'Type DELETE to confirm account deletion.' });
+    }
+
+    if (!emailConfirm || String(emailConfirm).trim().toLowerCase() !== String(req.user.email || '').trim().toLowerCase()) {
+        return res.status(400).json({ message: 'Email verification failed.' });
+    }
+
+    try {
+        const supabase = getSupabaseAdmin();
+        const { error } = await supabase
+            .from('users')
+            .delete()
+            .eq('id', req.user.id);
+
+        if (error) throw error;
+        return res.json({ message: 'Account deleted successfully.' });
+    } catch (error) {
+        return res.status(500).json({ message: error.message || 'Could not delete account.' });
+    }
 };
 
 module.exports = {
     googleLogin,
     getUserProfile,
-    updateUserProfile
+    updateUserProfile,
+    deleteUserAccount
 };
