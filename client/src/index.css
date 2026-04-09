@@ -2,6 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes animalFloat {
+  0% {
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    transform: translateY(-4px) scale(1.03);
+  }
+  100% {
+    transform: translateY(0px) scale(1);
+  }
+}
+
+.animal-avatar-float {
+  animation: animalFloat 2.4s ease-in-out infinite;
+}
+
 @layer components {
   .card {
     @apply bg-white rounded-card shadow-lg p-6 hover:shadow-xl transition-shadow duration-300;

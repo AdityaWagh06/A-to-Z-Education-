@@ -1,15 +1,21 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LogOut, User, BookOpen, Home, BarChart, ChevronDown, FileText } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import AuthModal from './AuthModal';
+import AnimatedAnimalAvatar from './AnimatedAnimalAvatar';
+import axios from 'axios';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const Navbar = () => {
-    const { user, logout } = useAuth();
+    const { user, logout, updateStandard } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
     const [authModalOpen, setAuthModalOpen] = useState(false);
     const [authMode, setAuthMode] = useState('login');
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [standards, setStandards] = useState([]);
     const dropdownRef = useRef(null);
 
     useEffect(() => {
@@ -24,6 +30,33 @@ const Navbar = () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, []);
+
+    useEffect(() => {
+        const fetchStandards = async () => {
+            try {
+                const { data } = await axios.get(`${API_URL}/api/standards`);
+                const sorted = (Array.isArray(data) ? data : []).sort((a, b) => Number(a.value) - Number(b.value));
+                setStandards(sorted);
+            } catch {
+                setStandards([]);
+            }
+        };
+
+        if (user?.role === 'student') {
+            fetchStandards();
+        }
+    }, [user?.role]);
+
+    const handleStandardSwitch = async (value) => {
+        try {
+            await updateStandard(Number(value));
+            if (location.pathname.startsWith('/student/tests')) {
+                navigate(`/student/tests/${Number(value)}`);
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    };
 
     const handleLogout = () => {
         logout();
@@ -89,17 +122,7 @@ const Navbar = () => {
                                         </div>
                                         
                                         <div className="relative">
-                                            {user?.picture ? (
-                                                <img 
-                                                    src={user.picture} 
-                                                    alt={user.name} 
-                                                    className="h-9 w-9 rounded-full object-cover border border-gray-200 shadow-sm"
-                                                />
-                                            ) : (
-                                                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold border border-primary/20 shadow-sm">
-                                                    {user?.name?.charAt(0)?.toUpperCase()}
-                                                </div>
-                                            )}
+                                            <AnimatedAnimalAvatar user={user} size="md" />
                                             <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm border border-gray-100">
                                                 <ChevronDown size={12} className={`text-gray-400 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
                                             </div>
@@ -114,6 +137,28 @@ const Navbar = () => {
                                             </div>
                                             
                                             <div className="py-1">
+                                                {user?.role === 'student' && standards.length > 0 && (
+                                                    <div className="px-4 py-2 border-b border-gray-100 mb-1">
+                                                        <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">Select Standard</p>
+                                                        <div className="grid grid-cols-3 gap-1.5">
+                                                            {standards.map((std) => {
+                                                                const value = Number(std.value);
+                                                                const active = Number(user?.standard) === value;
+                                                                return (
+                                                                    <button
+                                                                        key={std.id || std.value}
+                                                                        type="button"
+                                                                        onClick={() => handleStandardSwitch(value)}
+                                                                        className={`rounded px-2 py-1 text-[11px] font-semibold border transition ${active ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-300 text-gray-700 hover:border-blue-400 hover:text-blue-700'}`}
+                                                                    >
+                                                                        {value}
+                                                                    </button>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                )}
+
                                                 {user?.role === 'student' && (
                                                     <Link 
                                                         to="/student/profile" 
