@@ -6,6 +6,11 @@ const { getSupabaseAdmin } = require('../config/supabase');
 const buildFileUrl = (req, relativePath) => encodeURI(`${req.protocol}://${req.get('host')}${relativePath}`);
 const sanitizeUploadName = (fileName) => path.basename(String(fileName || 'file')).replace(/[^a-zA-Z0-9._-]/g, '_');
 
+const isMissingColumnError = (error, columnName) => {
+    const details = `${error?.message || ''} ${error?.details || ''} ${error?.hint || ''}`.toLowerCase();
+    return details.includes('column') && details.includes(String(columnName || '').toLowerCase());
+};
+
 const getOptionalAuthUser = async (req, supabase) => {
     try {
         const header = req.headers.authorization;
@@ -13,14 +18,28 @@ const getOptionalAuthUser = async (req, supabase) => {
 
         const token = header.split(' ')[1];
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const { data, error } = await supabase
+        const primary = await supabase
             .from('users')
             .select('id, role, purchased_tests, purchased_standard_boxes')
             .eq('id', decoded.id)
             .maybeSingle();
 
-        if (error || !data) return null;
-        return data;
+        if (primary.error && isMissingColumnError(primary.error, 'purchased_standard_boxes')) {
+            const fallback = await supabase
+                .from('users')
+                .select('id, role, purchased_tests')
+                .eq('id', decoded.id)
+                .maybeSingle();
+
+            if (fallback.error || !fallback.data) return null;
+            return {
+                ...fallback.data,
+                purchased_standard_boxes: [],
+            };
+        }
+
+        if (primary.error || !primary.data) return null;
+        return primary.data;
     } catch {
         return null;
     }
@@ -91,11 +110,29 @@ const getTestById = async (req, res) => {
         // Check if locked and unpaid
         if (test.is_locked) {
             // Check if user purchased
-             const { data: user } = await supabase
+            let user = null;
+            const userPrimary = await supabase
                 .from('users')
                 .select('purchased_tests, purchased_standard_boxes')
-                     .eq('id', req.user.id)
+                .eq('id', req.user.id)
                 .single();
+
+            if (userPrimary.error && isMissingColumnError(userPrimary.error, 'purchased_standard_boxes')) {
+                const userFallback = await supabase
+                    .from('users')
+                    .select('purchased_tests')
+                    .eq('id', req.user.id)
+                    .single();
+
+                if (userFallback.error) throw userFallback.error;
+                user = {
+                    ...userFallback.data,
+                    purchased_standard_boxes: [],
+                };
+            } else {
+                if (userPrimary.error) throw userPrimary.error;
+                user = userPrimary.data;
+            }
             
             const purchasedByTest = (user?.purchased_tests || []).includes(test.id);
             const purchasedByStandardBox = (user?.purchased_standard_boxes || []).includes(Number(test.standard));

@@ -7,6 +7,15 @@ const isMissingColumnError = (error, columnName) => {
     return details.includes('column') && details.includes(String(columnName || '').toLowerCase());
 };
 
+const isMissingTableError = (error, tableName) => {
+    const details = `${error?.message || ''} ${error?.details || ''} ${error?.hint || ''}`.toLowerCase();
+    const target = String(tableName || '').toLowerCase();
+    return (
+        (details.includes('could not find the table') && details.includes(target)) ||
+        (details.includes('relation') && details.includes(target) && details.includes('does not exist'))
+    );
+};
+
 const getRazorpayClient = () => {
     if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
         return null;
@@ -107,46 +116,54 @@ const createStandardBoxOrder = async (req, res) => {
     try {
         const supabase = getSupabaseAdmin();
 
-        const [{ data: box, error: boxError }, { data: user, error: userError }] = await Promise.all([
-            supabase
-                .from('paid_standard_boxes')
-                .select('id, standard, amount, is_active')
-                .eq('standard', standardNumber)
-                .single(),
-            supabase
-                .from('users')
-                .select('purchased_standard_boxes')
-                .eq('id', req.user.id)
-                .single(),
-        ]);
-
-        if (boxError || !box) {
-            return res.status(404).json({ message: 'Paid box not found for this standard.' });
-        }
-        if (userError) throw userError;
-
-        if (!box.is_active) {
-            return res.status(400).json({ message: 'This paid box is currently inactive.' });
-        }
-
-        const { count: assignedCount, error: assignedError } = await supabase
+        const { data: paidTests, error: paidTestsError } = await supabase
             .from('tests')
-            .select('id', { count: 'exact', head: true })
+            .select('id, price')
             .eq('standard', standardNumber)
             .eq('is_locked', true);
 
-        const { data: firstPaidTest, error: firstPaidTestError } = await supabase
-            .from('tests')
-            .select('id')
+        if (paidTestsError) throw paidTestsError;
+
+        let user = null;
+        const userPrimary = await supabase
+            .from('users')
+            .select('id, purchased_standard_boxes, purchased_tests')
+            .eq('id', req.user.id)
+            .single();
+
+        if (userPrimary.error && isMissingColumnError(userPrimary.error, 'purchased_standard_boxes')) {
+            const userFallback = await supabase
+                .from('users')
+                .select('id, purchased_tests')
+                .eq('id', req.user.id)
+                .single();
+
+            if (userFallback.error) throw userFallback.error;
+            user = userFallback.data;
+        } else {
+            if (userPrimary.error) throw userPrimary.error;
+            user = userPrimary.data;
+        }
+
+        const { data: box, error: boxError } = await supabase
+            .from('paid_standard_boxes')
+            .select('id, standard, amount, is_active')
             .eq('standard', standardNumber)
-            .eq('is_locked', true)
-            .limit(1)
             .maybeSingle();
 
-        if (assignedError) throw assignedError;
-        if (firstPaidTestError) throw firstPaidTestError;
-        if (!assignedCount || assignedCount <= 0) {
-            return res.status(400).json({ message: 'No tests are assigned to this box yet.' });
+        if (boxError && !isMissingTableError(boxError, 'paid_standard_boxes')) {
+            throw boxError;
+        }
+
+        const paidTestsInStandard = (paidTests || []).filter((test) => Number(test.price || 0) > 0);
+        if (paidTestsInStandard.length <= 0) {
+            return res.status(400).json({ message: 'No paid tests are available for this standard yet.' });
+        }
+
+        const firstPaidTest = paidTestsInStandard[0];
+
+        if (box && !box.is_active) {
+            return res.status(400).json({ message: 'This paid box is currently inactive.' });
         }
 
         const purchasedBoxes = user?.purchased_standard_boxes || [];
@@ -154,7 +171,8 @@ const createStandardBoxOrder = async (req, res) => {
             return res.status(409).json({ message: 'This standard box is already unlocked.' });
         }
 
-        const amount = Number(box.amount || 0);
+        const derivedAmount = Math.max(...paidTestsInStandard.map((test) => Number(test.price || 0)));
+        const amount = box ? Number(box.amount || 0) : Number(derivedAmount || 0);
         if (amount <= 0) {
             return res.status(400).json({ message: 'Invalid box amount configured.' });
         }
@@ -170,7 +188,7 @@ const createStandardBoxOrder = async (req, res) => {
             test_id: null,
             payment_type: 'standard_box',
             standard_value: standardNumber,
-            box_id: box.id,
+            box_id: box?.id || null,
             razorpay_order_id: order.id,
             amount,
             status: 'pending',
@@ -270,31 +288,40 @@ const verifyPayment = async (req, res) => {
                     boxQuery = boxQuery.eq('standard', standardHint);
                 }
 
-                const { data: box, error: boxError } = await boxQuery.single();
-
-                if (boxError || !box) {
-                    return res.status(400).json({ message: 'Linked paid box not found for payment.' });
+                const standardToValidate = Number(existingPayment.standard_value || standardHint || 0);
+                if (!Number.isInteger(standardToValidate) || standardToValidate <= 0) {
+                    return res.status(400).json({ message: 'Invalid standard for paid test unlock.' });
                 }
 
-                expectedAmount = Number(box.amount || 0);
-                if (expectedAmount <= 0) {
-                    return res.status(400).json({ message: 'This paid box has an invalid amount.' });
+                const { data: box, error: boxError } = await boxQuery.maybeSingle();
+                if (boxError && !isMissingTableError(boxError, 'paid_standard_boxes')) {
+                    throw boxError;
                 }
 
-                const standardToValidate = Number(existingPayment.standard_value || standardHint || box.standard);
-                if (standardToValidate !== Number(box.standard)) {
-                    return res.status(400).json({ message: 'Paid box standard mismatch.' });
-                }
-
-                const { count: assignedCount, error: assignedError } = await supabase
+                const { data: paidTests, error: paidTestsError } = await supabase
                     .from('tests')
-                    .select('id', { count: 'exact', head: true })
+                    .select('id, price')
                     .eq('standard', Number(standardToValidate))
                     .eq('is_locked', true);
 
-                if (assignedError) throw assignedError;
-                if (!assignedCount || assignedCount <= 0) {
-                    return res.status(400).json({ message: 'This paid box has no assigned tests.' });
+                if (paidTestsError) throw paidTestsError;
+
+                const paidTestsInStandard = (paidTests || []).filter((test) => Number(test.price || 0) > 0);
+                if (paidTestsInStandard.length <= 0) {
+                    return res.status(400).json({ message: 'This paid box has no paid tests.' });
+                }
+
+                if (box) {
+                    if (standardToValidate !== Number(box.standard)) {
+                        return res.status(400).json({ message: 'Paid box standard mismatch.' });
+                    }
+                    expectedAmount = Number(box.amount || 0);
+                } else {
+                    expectedAmount = Math.max(...paidTestsInStandard.map((test) => Number(test.price || 0)));
+                }
+
+                if (expectedAmount <= 0) {
+                    return res.status(400).json({ message: 'This paid box has an invalid amount.' });
                 }
             } else {
                 const { data: test, error: testError } = await supabase
@@ -333,16 +360,32 @@ const verifyPayment = async (req, res) => {
             if (!payment) throw new Error('Payment record not found');
 
             // Add access to user based on payment type
-            const { data: user, error: userError } = await supabase
+            let user = null;
+            let hasPurchasedStandardBoxesColumn = true;
+
+            const userPrimary = await supabase
                 .from('users')
-                .select('purchased_tests, purchased_standard_boxes')
+                .select('id, purchased_tests, purchased_standard_boxes')
                 .eq('id', payment.user_id)
                 .single();
-            
-            if (userError) throw userError;
 
-            const purchasedTests = user.purchased_tests || [];
-            const purchasedStandardBoxes = user.purchased_standard_boxes || [];
+            if (userPrimary.error && isMissingColumnError(userPrimary.error, 'purchased_standard_boxes')) {
+                hasPurchasedStandardBoxesColumn = false;
+                const userFallback = await supabase
+                    .from('users')
+                    .select('id, purchased_tests')
+                    .eq('id', payment.user_id)
+                    .single();
+
+                if (userFallback.error) throw userFallback.error;
+                user = userFallback.data;
+            } else {
+                if (userPrimary.error) throw userPrimary.error;
+                user = userPrimary.data;
+            }
+
+            const purchasedTests = user?.purchased_tests || [];
+            const purchasedStandardBoxes = user?.purchased_standard_boxes || [];
 
             const paymentStandardHint = Number(standard_value || payment.standard_value || 0);
             const shouldGrantStandardBox =
@@ -356,11 +399,36 @@ const verifyPayment = async (req, res) => {
                 if (!Number.isInteger(standardValue) || standardValue <= 0) {
                     return res.status(400).json({ message: 'Invalid standard value for paid test unlock.' });
                 }
-                if (!purchasedStandardBoxes.includes(standardValue)) {
-                    purchasedStandardBoxes.push(standardValue);
+
+                if (hasPurchasedStandardBoxesColumn) {
+                    if (!purchasedStandardBoxes.includes(standardValue)) {
+                        purchasedStandardBoxes.push(standardValue);
+                        const { error: updateUserError } = await supabase
+                            .from('users')
+                            .update({ purchased_standard_boxes: purchasedStandardBoxes })
+                            .eq('id', payment.user_id);
+
+                        if (updateUserError) throw updateUserError;
+                    }
+                } else {
+                    const { data: standardPaidTests, error: standardPaidTestsError } = await supabase
+                        .from('tests')
+                        .select('id')
+                        .eq('standard', standardValue)
+                        .eq('is_locked', true);
+
+                    if (standardPaidTestsError) throw standardPaidTestsError;
+
+                    const mergedPurchasedTests = [
+                        ...new Set([
+                            ...purchasedTests,
+                            ...(standardPaidTests || []).map((row) => row.id).filter(Boolean),
+                        ]),
+                    ];
+
                     const { error: updateUserError } = await supabase
                         .from('users')
-                        .update({ purchased_standard_boxes: purchasedStandardBoxes })
+                        .update({ purchased_tests: mergedPurchasedTests })
                         .eq('id', payment.user_id);
 
                     if (updateUserError) throw updateUserError;
