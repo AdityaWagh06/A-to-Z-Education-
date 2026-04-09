@@ -94,6 +94,7 @@ export const AuthProvider = ({ children }) => {
         axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
         setUser(res.data);
         setAuthSource('backend');
+        return res.data;
     };
 
     const signUpWithPassword = async ({ name, email, password }) => {
@@ -166,19 +167,38 @@ export const AuthProvider = ({ children }) => {
         setAuthSource('none');
     };
 
-    const updateStandard = async (standard) => {
+    const updateProfile = async (payload = {}) => {
         const token = localStorage.getItem('token');
         if (!token) {
             throw new Error('Please login first');
         }
 
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        const res = await axios.put(`${API_URL}/api/auth/profile`, { standard });
+        const res = await axios.put(`${API_URL}/api/auth/profile`, payload);
         setUser((prev) => ({ ...prev, ...res.data }));
+        return res.data;
+    };
+
+    const updateStandard = async (standard) => {
+        return updateProfile({ standard });
+    };
+
+    const deleteAccount = async (payload) => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            throw new Error('Please login first');
+        }
+
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        await axios.delete(`${API_URL}/api/auth/account`, { data: payload });
+        localStorage.removeItem('token');
+        delete axios.defaults.headers.common['Authorization'];
+        setUser(null);
+        setAuthSource('none');
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, hasSupabaseConfig, logout, loading, updateStandard }}>
+        <AuthContext.Provider value={{ user, login, hasSupabaseConfig, logout, loading, updateStandard, updateProfile, deleteAccount }}>
             {!loading && children}
         </AuthContext.Provider>
     );

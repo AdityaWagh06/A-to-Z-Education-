@@ -3,6 +3,9 @@ import { GoogleLogin } from '@react-oauth/google';
 import { X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const parseJwt = (token) => {
     try {
@@ -20,6 +23,8 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }) => {
     const [googleCredential, setGoogleCredential] = useState(null);
     const [name, setName] = useState('');
     const [mobile, setMobile] = useState('');
+    const [standard, setStandard] = useState(null);
+    const [standards, setStandards] = useState([]);
 
     useEffect(() => {
         if (!isOpen) {
@@ -27,6 +32,7 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }) => {
             setGoogleCredential(null);
             setName('');
             setMobile('');
+            setStandard(null);
             return;
         }
 
@@ -34,6 +40,30 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }) => {
             setStep('initial');
         }
     }, [defaultTab, isOpen]);
+
+    useEffect(() => {
+        const fetchStandards = async () => {
+            try {
+                const { data } = await axios.get(`${API_URL}/api/standards`);
+                const sorted = (Array.isArray(data) ? data : []).sort((a, b) => Number(a.value) - Number(b.value));
+                setStandards(sorted);
+            } catch {
+                setStandards([
+                    { id: 's2', value: 2, label: 'Standard 2' },
+                    { id: 's3', value: 3, label: 'Standard 3' },
+                    { id: 's4', value: 4, label: 'Standard 4' },
+                    { id: 's5', value: 5, label: 'Standard 5' },
+                    { id: 's6', value: 6, label: 'Standard 6' },
+                    { id: 's7', value: 7, label: 'Standard 7' },
+                    { id: 's8', value: 8, label: 'Standard 8' },
+                    { id: 's9', value: 9, label: 'Standard 9' },
+                    { id: 's10', value: 10, label: 'Standard 10' },
+                ]);
+            }
+        };
+
+        if (isOpen) fetchStandards();
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
@@ -59,8 +89,12 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }) => {
 
     const handleDetailsSubmit = async (e) => {
         e.preventDefault();
+        if (!standard) {
+            alert('Please select your standard.');
+            return;
+        }
         try {
-            await login(googleCredential, { name, mobile });
+            await login(googleCredential, { name, mobile, standard: Number(standard) });
             onClose();
             navigate('/student/home', { replace: true });
             // Reset state
@@ -68,6 +102,7 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }) => {
             setGoogleCredential(null);
             setName('');
             setMobile('');
+            setStandard(null);
         } catch (error) {
             console.error('Registration failed', error);
             alert('Registration failed. Please try again.');
@@ -156,6 +191,25 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }) => {
                                         value={mobile}
                                         onChange={(e) => setMobile(e.target.value)}
                                     />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Select Standard</label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {standards.map((std) => {
+                                            const value = Number(std.value);
+                                            const selected = Number(standard) === value;
+                                            return (
+                                                <button
+                                                    key={std.id || std.value}
+                                                    type="button"
+                                                    onClick={() => setStandard(value)}
+                                                    className={`rounded-lg border px-2 py-2 text-xs font-semibold transition ${selected ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-300 text-gray-700 hover:border-blue-400 hover:text-blue-700'}`}
+                                                >
+                                                    {std.label || `Standard ${value}`}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             </div>
 
