@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
-import { Lock, FileText, X, Eye } from 'lucide-react';
+import { FileText, X, Eye, ChevronRight, ShieldCheck } from 'lucide-react';
 import { pdfjs } from 'react-pdf';
+import { useAuth } from '../context/AuthContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 const RAZORPAY_KEY_ID = import.meta.env.VITE_RAZORPAY_KEY_ID || '';
@@ -12,6 +13,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.vers
 const Test = () => {
     const { subject, standard: routeStandard } = useParams();
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [searchParams] = useSearchParams();
     const [tests, setTests] = useState([]);
     const [standards, setStandards] = useState([]);
@@ -74,8 +76,18 @@ const Test = () => {
     }, [subject]);
 
     useEffect(() => {
-        setSelectedCategory(null);
+        if (activeStandard) {
+            setSelectedCategory('free');
+        } else {
+            setSelectedCategory(null);
+        }
     }, [activeStandard]);
+
+    useEffect(() => {
+        if (!activeStandard && user?.standard) {
+            navigate(`/student/tests/${Number(user.standard)}`, { replace: true });
+        }
+    }, [activeStandard, user?.standard, navigate]);
 
     const fetchTests = async () => {
         try {
@@ -135,7 +147,14 @@ const Test = () => {
             }, {})
     );
 
-    const paidBoxes = configuredPaidBoxes.length > 0 ? configuredPaidBoxes : derivedPaidBoxes;
+    const paidBoxesByStandard = new Map();
+    for (const box of derivedPaidBoxes) {
+        paidBoxesByStandard.set(Number(box.standard), box);
+    }
+    for (const box of configuredPaidBoxes) {
+        paidBoxesByStandard.set(Number(box.standard), box);
+    }
+    const paidBoxes = Array.from(paidBoxesByStandard.values()).sort((a, b) => Number(a.standard) - Number(b.standard));
     const derivedStandards = Object.values(
         tests.reduce((acc, test) => {
             const value = Number(test.standard);
@@ -397,7 +416,7 @@ const Test = () => {
 
     const openUnlockDialog = (standard, amount) => {
         if (!amount || Number(amount) <= 0) {
-            notify('error', 'Paid box price is not configured yet by admin.');
+            notify('error', 'Paid test price is not configured yet by admin.');
             return;
         }
 
@@ -411,226 +430,165 @@ const Test = () => {
         await handleUnlockStandardBox(box);
     };
 
+    const renderTestRow = (test) => (
+        <div key={test._id} className="grid grid-cols-1 lg:grid-cols-12 gap-3 lg:gap-4 px-4 py-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50/70">
+            <div className="lg:col-span-5">
+                <p className="font-semibold text-gray-900">{test.title}</p>
+                <p className="text-xs text-gray-500 mt-1 capitalize">{test.subject} | Standard {test.standard}</p>
+            </div>
+            <div className="lg:col-span-2">
+                <span className="inline-flex items-center rounded border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-700">
+                    {test.questions?.length > 0 ? `${test.questions.length} Qs` : 'PDF Test'}
+                </span>
+            </div>
+            <div className="lg:col-span-2">
+                <span className={`inline-flex items-center rounded px-2.5 py-1 text-xs font-medium ${test.isLocked ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                    {test.isLocked ? 'Paid' : 'Free'}
+                </span>
+            </div>
+            <div className="lg:col-span-3 flex flex-wrap gap-2">
+                <button
+                    onClick={() => test.pdfUrl ? handleViewPdf(test.pdfUrl, test.title) : handleOpenUnlockedTest(test)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-800 hover:bg-gray-100"
+                >
+                    <Eye size={15} /> Paper
+                </button>
+                {(test.answerSheetUrl || test.hasAnswerSheet) && (
+                    <button
+                        onClick={() => test.answerSheetUrl ? handleViewPdf(test.answerSheetUrl, `${test.title} - Answer Key`) : handleOpenUnlockedAnswerSheet(test)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-800 hover:bg-gray-100"
+                    >
+                        <FileText size={15} /> Key
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+
     return (
-        <div className="min-h-screen bg-gray-50 p-6">
-            <h1 className="text-3xl font-bold text-gray-800 mb-3">Tests</h1>
-            <p className="text-gray-600 mb-6">Choose a standard first, then open Free Tests or Paid Tests.</p>
+        <div className="min-h-screen bg-gray-50 p-4 md:p-6">
+            <div className="max-w-7xl mx-auto">
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-6 shadow-sm">
+                    <h1 className="text-3xl font-bold text-gray-900">Test Center</h1>
+                    <p className="text-gray-600 mt-2">Choose your standard, then access Free or Paid tests in a structured list.</p>
+                    <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold text-gray-700">
+                        <span className="rounded-md border border-gray-300 bg-gray-50 px-3 py-1">Free Tests: {freeTests.length}</span>
+                        <span className="rounded-md border border-gray-300 bg-gray-50 px-3 py-1">Paid Tests: {tests.filter((test) => test.isLocked).length}</span>
+                        <span className="rounded-md border border-gray-300 bg-gray-50 px-3 py-1">Total: {tests.length}</span>
+                    </div>
+                </div>
+
+            {!loading && standardsToShow.length > 0 && (
+                <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 mb-4">
+                    <p className="text-sm font-semibold text-gray-700 mb-3">Choose Standard</p>
+                    <div className="flex flex-wrap gap-2">
+                        {standardsToShow.map((std) => {
+                            const stdValue = Number(std.value);
+                            const isActiveStandard = Number(activeStandard) === stdValue;
+                            return (
+                                <button
+                                    key={std.id || std.value}
+                                    type="button"
+                                    onClick={() => navigate(`/student/tests/${stdValue}`)}
+                                    className={`px-4 py-2 rounded-lg border text-sm font-semibold transition ${isActiveStandard ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-300 text-gray-700 hover:border-blue-400 hover:text-blue-700'}`}
+                                >
+                                    {std.label || `Standard ${stdValue}`}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
             {statusMessage && (
-                <div className={`mb-4 rounded-lg border px-4 py-3 text-sm ${statusMessage.type === 'success' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
-                    {statusMessage.text}
+                <div className="fixed top-4 right-4 z-[120] w-[min(92vw,420px)]">
+                    <div className={`rounded-lg border px-4 py-3 text-sm shadow-lg ${statusMessage.type === 'success' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+                        {statusMessage.text}
+                    </div>
                 </div>
             )}
 
             {loading ? (
-                <p>Loading tests...</p>
+                <div className="bg-white border border-gray-200 rounded-2xl p-8 text-center text-gray-600">Loading tests...</div>
             ) : !activeStandard && standardsToShow.length === 0 ? (
                 <div className="text-center py-20">
                     <p className="text-xl text-gray-500">No tests available yet.</p>
                 </div>
             ) : !activeStandard ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {standardsToShow.map((std) => {
-                        const stdValue = Number(std.value);
-                        const stdTests = tests.filter((test) => Number(test.standard) === stdValue);
-                        const stdFree = stdTests.filter((test) => !test.isLocked).length;
-                        const stdPaid = stdTests.filter((test) => test.isLocked).length;
-
-                        return (
-                        <button
-                            key={std.id || std.value}
-                            type="button"
-                            onClick={() => {
-                                navigate(`/student/tests/${stdValue}`);
-                            }}
-                            className="text-left bg-white rounded-card shadow-md overflow-hidden hover:shadow-lg transition"
-                        >
-                            <div className="bg-primary p-4 text-white">
-                                <h3 className="text-xl font-bold">{std.label || `Standard ${stdValue}`}</h3>
-                                <div className="flex justify-between items-center mt-2 text-sm opacity-90">
-                                    <span>{stdTests.length} Total Tests</span>
-                                </div>
-                            </div>
-
-                            <div className="p-6">
-                                <div className="flex gap-2 text-xs">
-                                    <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded">Free: {stdFree}</span>
-                                    <span className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded">Paid: {stdPaid}</span>
-                                </div>
-                            </div>
-                        </button>
-                    );})}
+                <div className="bg-white border border-dashed border-gray-300 rounded-2xl shadow-sm p-8 text-center text-gray-600">
+                    Choose a standard from the boxes above to view tests.
                 </div>
             ) : (
-                <div className="mt-2 bg-white border rounded-xl shadow-sm p-5">
+                <div className="mt-2 bg-white border border-gray-200 rounded-2xl shadow-sm p-5 md:p-6">
                     <div className="flex items-center justify-between mb-5">
-                        <h2 className="text-2xl font-bold text-gray-900">Standard {activeStandard}</h2>
-                        <button
-                            type="button"
-                            onClick={() => {
-                                navigate('/student/tests');
-                                setSelectedCategory(null);
-                            }}
-                            className="text-sm text-gray-600 hover:text-gray-900"
-                        >
-                            Back to Standards
-                        </button>
+                        <h2 className="text-2xl font-extrabold text-gray-900">Standard {activeStandard}</h2>
+                        <span className="text-xs text-gray-500">Switch standard from top boxes</span>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                        <button
-                            type="button"
-                            onClick={() => setSelectedCategory('free')}
-                            className={`text-left bg-white rounded-card shadow-md overflow-hidden hover:shadow-lg transition border ${selectedCategory === 'free' ? 'border-primary' : 'border-gray-200'}`}
-                        >
-                            <div className="bg-primary p-4 text-white">
-                                <h3 className="text-xl font-bold">Free Tests</h3>
-                            </div>
-                            <div className="p-6">
-                                <p className="text-sm text-gray-700">{selectedFreeTests.length} tests available</p>
-                                <p className="text-sm text-gray-700 mt-1">No payment required</p>
-                                <button
-                                    type="button"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSelectedCategory('free');
-                                    }}
-                                    className="mt-3 inline-flex items-center justify-center px-3 py-1.5 text-xs font-semibold rounded-md bg-primary text-white hover:bg-opacity-90"
-                                >
-                                    Open Free Tests
-                                </button>
-                            </div>
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() => setSelectedCategory('paid')}
-                            className={`text-left bg-white rounded-card shadow-md overflow-hidden hover:shadow-lg transition border ${selectedCategory === 'paid' ? 'border-primary' : 'border-gray-200'}`}
-                        >
-                            <div className="bg-primary p-4 text-white">
-                                <h3 className="text-xl font-bold">Paid Tests</h3>
-                            </div>
-                            <div className="p-6">
-                                <p className="text-sm text-gray-700">{selectedPaidTests.length} tests available</p>
-                                <p className="text-sm text-gray-700 mt-1">{isSelectedPaidUnlocked ? 'Unlocked for your account' : `One-time unlock: ₹${selectedPaidAmount}`}</p>
-                                {isSelectedPaidUnlocked ? (
-                                    <button
-                                        type="button"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setSelectedCategory('paid');
-                                        }}
-                                        className="mt-3 inline-flex items-center justify-center px-3 py-1.5 text-xs font-semibold rounded-md bg-primary text-white hover:bg-opacity-90"
-                                    >
-                                        Unlock Paid Tests
-                                    </button>
-                                ) : (
-                                    <button
-                                        type="button"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            openUnlockDialog(activeStandard, selectedPaidAmount);
-                                        }}
-                                        disabled={!selectedPaidBox || selectedPaidAmount <= 0 || unlockingTestId === `std-${activeStandard}`}
-                                        className="mt-3 inline-flex items-center justify-center px-3 py-1.5 text-xs font-semibold rounded-md bg-primary text-white hover:bg-opacity-90 disabled:opacity-60"
-                                    >
-                                        {unlockingTestId === `std-${activeStandard}` ? 'Processing...' : 'Unlock Paid Tests'}
-                                    </button>
-                                )}
-                            </div>
-                        </button>
+                    <div className="mb-6 border-b border-gray-200">
+                        <div className="flex gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setSelectedCategory('free')}
+                                className={`px-4 py-2.5 text-sm font-semibold rounded-t-md border border-b-0 transition ${selectedCategory === 'free' ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-100 text-gray-600 border-transparent hover:text-blue-700'}`}
+                            >
+                                Free Tests ({selectedFreeTests.length})
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setSelectedCategory('paid')}
+                                className={`px-4 py-2.5 text-sm font-semibold rounded-t-md border border-b-0 transition ${selectedCategory === 'paid' ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-100 text-gray-600 border-transparent hover:text-blue-700'}`}
+                            >
+                                Paid Tests ({selectedPaidTests.length})
+                            </button>
+                        </div>
                     </div>
 
                     {selectedCategory === 'free' && (
                         selectedFreeTests.length === 0 ? (
-                            <p className="text-gray-500">No free tests in this standard yet.</p>
+                            <p className="text-gray-500 rounded-xl border border-dashed border-gray-300 bg-gray-50 p-6 text-center">No free tests in this standard yet.</p>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {selectedFreeTests.map((test) => (
-                                    <div key={test._id} className="bg-white rounded-card shadow-md overflow-hidden hover:shadow-lg transition border border-gray-100">
-                                        <div className="bg-gray-800 p-4 text-white">
-                                            <h3 className="text-xl font-bold">{test.title}</h3>
-                                            <div className="flex justify-between items-center mt-2 text-sm opacity-90">
-                                                <span>{test.questions?.length > 0 ? `${test.questions.length} Questions` : 'PDF Test'}</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="p-6">
-                                            <div className="space-y-3">
-                                                <button
-                                                    onClick={() => test.pdfUrl ? handleViewPdf(test.pdfUrl, test.title) : handleOpenUnlockedTest(test)}
-                                                    className="w-full bg-primary text-white font-bold py-2 px-4 rounded-lg hover:bg-opacity-90 transition flex items-center justify-center gap-2"
-                                                >
-                                                    <Eye size={18} /> View Test Paper
-                                                </button>
-
-                                                {(test.answerSheetUrl || test.hasAnswerSheet) && (
-                                                    <button
-                                                        onClick={() => test.answerSheetUrl ? handleViewPdf(test.answerSheetUrl, `${test.title} - Answer Key`) : handleOpenUnlockedAnswerSheet(test)}
-                                                        className="w-full bg-white text-green-600 border border-green-600 font-bold py-2 px-4 rounded-lg hover:bg-green-50 transition flex items-center justify-center gap-2"
-                                                    >
-                                                        <FileText size={18} /> View Answer Key
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
+                            <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
+                                <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 lg:gap-4 px-4 py-3 bg-gray-100 border-b border-gray-200 text-xs font-semibold uppercase tracking-wide text-gray-600">
+                                    <div className="lg:col-span-5">Test</div>
+                                    <div className="lg:col-span-2">Format</div>
+                                    <div className="lg:col-span-2">Access</div>
+                                    <div className="lg:col-span-3">Actions</div>
+                                </div>
+                                {selectedFreeTests.map(renderTestRow)}
                             </div>
                         )
                     )}
 
                     {selectedCategory === 'paid' && (
                         !selectedPaidBox ? (
-                            <p className="text-gray-500">Paid box for Standard {activeStandard} is not configured by admin yet.</p>
+                            <p className="text-gray-500 rounded-xl border border-dashed border-gray-300 bg-gray-50 p-6 text-center">Paid tests for Standard {activeStandard} are not configured by admin yet.</p>
                         ) : !isSelectedPaidUnlocked ? (
-                            <div className="border border-gray-200 rounded-lg p-5 bg-gray-50 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                                <div>
-                                    <p className="font-semibold text-gray-800">Standard {activeStandard} paid box is locked.</p>
-                                    <p className="text-sm text-gray-600">Unlock once to access all paid tests in this standard.</p>
+                            <div className="border border-gray-300 rounded-xl p-5 bg-gray-50 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                                <div className="space-y-1">
+                                    <p className="font-semibold text-gray-900 flex items-center gap-2"><ShieldCheck size={18} /> Premium Access Required</p>
+                                    <p className="text-sm text-gray-700">Unlock all paid tests for Standard {activeStandard} with a one-time payment.</p>
                                 </div>
                                 <button
                                     onClick={() => openUnlockDialog(activeStandard, selectedPaidAmount)}
                                     disabled={unlockingTestId === `std-${activeStandard}` || selectedPaidAmount <= 0}
-                                    className="bg-gray-900 text-white font-bold py-2 px-4 rounded-lg hover:bg-black transition disabled:opacity-60"
+                                    className="bg-gray-900 text-white font-semibold py-2.5 px-4 rounded-md hover:bg-black transition disabled:opacity-60"
                                 >
-                                    {unlockingTestId === `std-${activeStandard}` ? 'Processing...' : `Unlock Paid Tests - ₹${selectedPaidAmount}`}
+                                    {unlockingTestId === `std-${activeStandard}` ? 'Processing...' : `Proceed Payment - Rs ${selectedPaidAmount}`}
                                 </button>
                             </div>
                         ) : (
                             selectedPaidTests.length === 0 ? (
-                                <p className="text-gray-500">No paid tests in this standard yet.</p>
+                                <p className="text-gray-500 rounded-xl border border-dashed border-gray-300 bg-gray-50 p-6 text-center">No paid tests in this standard yet.</p>
                             ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {selectedPaidTests.map((test) => (
-                                        <div key={test._id} className="bg-white rounded-card shadow-md overflow-hidden hover:shadow-lg transition border border-gray-100">
-                                            <div className="bg-gray-800 p-4 text-white">
-                                                <h3 className="text-xl font-bold">{test.title}</h3>
-                                                <div className="flex justify-between items-center mt-2 text-sm opacity-90">
-                                                    <span>{test.questions?.length > 0 ? `${test.questions.length} Questions` : 'PDF Test'}</span>
-                                                </div>
-                                            </div>
-
-                                            <div className="p-6">
-                                                <div className="space-y-3">
-                                                    <button
-                                                        onClick={() => test.pdfUrl ? handleViewPdf(test.pdfUrl, test.title) : handleOpenUnlockedTest(test)}
-                                                        className="w-full bg-primary text-white font-bold py-2 px-4 rounded-lg hover:bg-opacity-90 transition flex items-center justify-center gap-2"
-                                                    >
-                                                        <Eye size={18} /> View Test Paper
-                                                    </button>
-
-                                                    {(test.answerSheetUrl || test.hasAnswerSheet) && (
-                                                        <button
-                                                            onClick={() => test.answerSheetUrl ? handleViewPdf(test.answerSheetUrl, `${test.title} - Answer Key`) : handleOpenUnlockedAnswerSheet(test)}
-                                                            className="w-full bg-white text-green-600 border border-green-600 font-bold py-2 px-4 rounded-lg hover:bg-green-50 transition flex items-center justify-center gap-2"
-                                                        >
-                                                            <FileText size={18} /> View Answer Key
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
+                                <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
+                                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 lg:gap-4 px-4 py-3 bg-gray-100 border-b border-gray-200 text-xs font-semibold uppercase tracking-wide text-gray-600">
+                                        <div className="lg:col-span-5">Test</div>
+                                        <div className="lg:col-span-2">Format</div>
+                                        <div className="lg:col-span-2">Access</div>
+                                        <div className="lg:col-span-3">Actions</div>
+                                    </div>
+                                    {selectedPaidTests.map(renderTestRow)}
                                 </div>
                             )
                         )
@@ -641,7 +599,7 @@ const Test = () => {
             {unlockDialog && (
                 <div className="fixed inset-0 z-[90] bg-black/50 flex items-center justify-center p-4">
                     <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
-                        <div className="bg-primary text-white p-5">
+                        <div className="bg-gray-900 text-white p-5">
                             <h3 className="text-xl font-bold">Unlock Paid Tests</h3>
                             <p className="text-sm opacity-90 mt-1">Standard {unlockDialog.standard} Premium Access</p>
                         </div>
@@ -653,7 +611,7 @@ const Test = () => {
 
                             <div className="rounded-lg border bg-gray-50 p-4 flex items-center justify-between">
                                 <span className="text-sm font-medium text-gray-600">Total</span>
-                                <span className="text-2xl font-extrabold text-gray-900">₹{unlockDialog.amount}</span>
+                                <span className="text-2xl font-extrabold text-gray-900">Rs {unlockDialog.amount}</span>
                             </div>
 
                             <div className="flex gap-3">
@@ -667,7 +625,7 @@ const Test = () => {
                                 <button
                                     type="button"
                                     onClick={confirmUnlockDialog}
-                                    className="flex-1 py-2.5 rounded-lg bg-primary text-white font-semibold hover:bg-opacity-90"
+                                    className="flex-1 py-2.5 rounded-lg bg-gray-900 text-white font-semibold hover:bg-black"
                                 >
                                     Proceed to Payment
                                 </button>
@@ -677,13 +635,12 @@ const Test = () => {
                 </div>
             )}
 
-            {/* PDF Overlay Viewer */}
             {currentPdf && (
                 <div className="fixed inset-0 z-[100] bg-black/90 flex flex-col items-center justify-center p-4 animate-in fade-in duration-200">
                     <div className="w-full max-w-6xl h-full flex flex-col bg-gray-900 rounded-xl overflow-hidden shadow-2xl">
                         <div className="bg-gray-800 p-4 flex justify-between items-center text-white">
                             <h2 className="text-xl font-bold truncate">{pdfTitle}</h2>
-                            <button 
+                            <button
                                 onClick={() => {
                                     setCurrentPdf(null);
                                     setPdfData(null);
@@ -731,6 +688,7 @@ const Test = () => {
                     </div>
                 </div>
             )}
+            </div>
         </div>
     );
 };
