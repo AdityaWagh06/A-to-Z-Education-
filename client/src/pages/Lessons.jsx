@@ -20,13 +20,43 @@ const Lessons = () => {
     const [selectedVideo, setSelectedVideo] = useState(null);
 
     useEffect(() => {
-        const standardQuery = standard ? `&standard=${standard}` : '';
-        axios.get(`${API_URL}/api/videos?subject=${subject}${standardQuery}`)
-            .then(res => {
-                setVideos(res.data);
-                if (res.data.length > 0) setSelectedVideo(res.data[0]);
-            })
-            .catch(err => console.error(err));
+        const fetchVideos = () => {
+            const standardQuery = standard ? `&standard=${standard}` : '';
+            axios.get(`${API_URL}/api/videos?subject=${subject}${standardQuery}`)
+                .then(res => {
+                    const nextVideos = res.data || [];
+                    setVideos(nextVideos);
+
+                    if (nextVideos.length === 0) {
+                        setSelectedVideo(null);
+                        return;
+                    }
+
+                    setSelectedVideo((prev) => {
+                        if (!prev) return nextVideos[0];
+                        const stillExists = nextVideos.find((v) => v._id === prev._id);
+                        return stillExists || nextVideos[0];
+                    });
+                })
+                .catch(err => console.error(err));
+        };
+
+        const refreshIfVisible = () => {
+            if (document.visibilityState === 'visible') {
+                fetchVideos();
+            }
+        };
+
+        fetchVideos();
+        const intervalId = window.setInterval(fetchVideos, 15000);
+        window.addEventListener('focus', refreshIfVisible);
+        document.addEventListener('visibilitychange', refreshIfVisible);
+
+        return () => {
+            window.clearInterval(intervalId);
+            window.removeEventListener('focus', refreshIfVisible);
+            document.removeEventListener('visibilitychange', refreshIfVisible);
+        };
     }, [subject, standard]);
 
     const handleNextLesson = () => {

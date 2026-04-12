@@ -48,7 +48,24 @@ const StudentHome = () => {
                 console.error("Failed to fetch data", err);
             }
         };
+
+        const refreshIfVisible = () => {
+            if (document.visibilityState === 'visible') {
+                fetchData();
+            }
+        };
+
         fetchData();
+
+        const intervalId = window.setInterval(fetchData, 15000);
+        window.addEventListener('focus', refreshIfVisible);
+        document.addEventListener('visibilitychange', refreshIfVisible);
+
+        return () => {
+            window.clearInterval(intervalId);
+            window.removeEventListener('focus', refreshIfVisible);
+            document.removeEventListener('visibilitychange', refreshIfVisible);
+        };
     }, []);
 
     const handleStandardSelect = async (stdValue) => {
@@ -175,6 +192,24 @@ const StudentHome = () => {
                                     </div>
                                 </Link>
                             ))}
+                        </div>
+
+                        <div className="mt-6">
+                            <Link
+                                to="/about"
+                                className="group block bg-white rounded-2xl border border-blue-200 shadow-sm hover:shadow-lg transition-all duration-300 p-5"
+                            >
+                                <div className="flex items-start justify-between gap-4">
+                                    <div>
+                                        <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">About A to Z Education</p>
+                                        <h3 className="text-lg font-bold text-gray-900 mt-1">Meet Anand Wagh and Platform Details</h3>
+                                        <p className="text-sm text-gray-600 mt-2">Read institute details, qualifications, WhatsApp class link, and YouTube highlights.</p>
+                                    </div>
+                                    <div className="text-primary group-hover:translate-x-1 transition-transform">
+                                        <ChevronRight className="w-5 h-5" />
+                                    </div>
+                                </div>
+                            </Link>
                         </div>
                     </section>
                 )}

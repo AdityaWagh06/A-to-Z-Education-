@@ -72,7 +72,26 @@ const Test = () => {
             }
         };
 
+        const silentRefresh = () => {
+            Promise.all([fetchTests(), fetchPaidStandardBoxes(), fetchStandards()]).catch(() => {});
+        };
+
+        const refreshIfVisible = () => {
+            if (document.visibilityState === 'visible') {
+                silentRefresh();
+            }
+        };
+
         loadData();
+        const intervalId = window.setInterval(silentRefresh, 15000);
+        window.addEventListener('focus', refreshIfVisible);
+        document.addEventListener('visibilitychange', refreshIfVisible);
+
+        return () => {
+            window.clearInterval(intervalId);
+            window.removeEventListener('focus', refreshIfVisible);
+            document.removeEventListener('visibilitychange', refreshIfVisible);
+        };
     }, [subject]);
 
     useEffect(() => {

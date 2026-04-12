@@ -1,12 +1,14 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, User, BookOpen, Home, BarChart, ChevronDown, FileText } from 'lucide-react';
+import { LogOut, User, BookOpen, Home, BarChart, ChevronDown, FileText, Info } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import AuthModal from './AuthModal';
 import AnimatedAnimalAvatar from './AnimatedAnimalAvatar';
 import axios from 'axios';
+import siteLogo from '../assets/image.png';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const SITE_LOGO_URL = siteLogo;
 
 const Navbar = () => {
     const { user, logout, updateStandard } = useAuth();
@@ -45,6 +47,24 @@ const Navbar = () => {
         if (user?.role === 'student') {
             fetchStandards();
         }
+
+        if (user?.role !== 'student') return;
+
+        const refreshIfVisible = () => {
+            if (document.visibilityState === 'visible') {
+                fetchStandards();
+            }
+        };
+
+        const intervalId = window.setInterval(fetchStandards, 15000);
+        window.addEventListener('focus', refreshIfVisible);
+        document.addEventListener('visibilitychange', refreshIfVisible);
+
+        return () => {
+            window.clearInterval(intervalId);
+            window.removeEventListener('focus', refreshIfVisible);
+            document.removeEventListener('visibilitychange', refreshIfVisible);
+        };
     }, [user?.role]);
 
     const handleStandardSwitch = async (value) => {
@@ -80,7 +100,7 @@ const Navbar = () => {
                     <div className="flex justify-between h-16">
                         <div className="flex items-center">
                             <Link to="/" className="flex-shrink-0 flex items-center gap-2 text-primary">
-                                <BookOpen className="h-8 w-8" />
+                                <img src={SITE_LOGO_URL} alt="A to Z Education logo" className="h-12 w-12 sm:h-14 sm:w-14 object-contain" />
                                 <span className="font-extrabold text-xl tracking-tight">A to Z Education</span>
                             </Link>
                         </div>
@@ -100,12 +120,18 @@ const Navbar = () => {
                                     <Link to="/student/profile" className="text-gray-600 hover:text-primary font-medium flex items-center gap-1 transition-colors">
                                         <User size={18}/> Profile
                                     </Link>
+                                    <Link to="/about" className="text-gray-600 hover:text-primary font-medium flex items-center gap-1 transition-colors">
+                                        <Info size={18}/> About
+                                    </Link>
                                 </div>
                             )}
                             {user?.role === 'admin' && (
                                 <div className="hidden md:flex items-center gap-6">
                                     <Link to="/admin/dashboard" className="text-gray-600 hover:text-primary font-medium flex items-center gap-1 transition-colors">
                                         <BarChart size={18}/> Dashboard
+                                    </Link>
+                                    <Link to="/about" className="text-gray-600 hover:text-primary font-medium flex items-center gap-1 transition-colors">
+                                        <Info size={18}/> About
                                     </Link>
                                 </div>
                             )}
@@ -179,6 +205,15 @@ const Navbar = () => {
                                                         Tests
                                                     </Link>
                                                 )}
+
+                                                <Link
+                                                    to="/about"
+                                                    className="px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-primary flex items-center gap-3 transition-colors group"
+                                                    onClick={() => setIsDropdownOpen(false)}
+                                                >
+                                                    <Info size={16} className="text-gray-400 group-hover:text-primary transition-colors" />
+                                                    About
+                                                </Link>
                                                 
                                                 {user?.role === 'admin' ? (
                                                      <Link 
@@ -218,6 +253,12 @@ const Navbar = () => {
                                 </div>
                             ) : (
                                 <div className="flex items-center gap-3">
+                                    <Link
+                                        to="/about"
+                                        className="px-4 py-2 rounded-md font-semibold text-gray-700 border border-gray-300 hover:bg-gray-50 transition flex items-center gap-2"
+                                    >
+                                        <Info size={16} /> About
+                                    </Link>
                                     <button 
                                         onClick={openLogin}
                                         className="px-6 py-2 rounded-md font-bold text-primary border border-primary hover:bg-primary/5 transition"
