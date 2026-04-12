@@ -71,6 +71,9 @@ app.use(cors({
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Razorpay webhook signatures require the raw request body.
+app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
+
 app.use(express.json({ limit: '1mb' }));
 
 app.use('/api/auth', authRoutes);
