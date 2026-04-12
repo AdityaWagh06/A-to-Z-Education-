@@ -1,0 +1,18 @@
+[
+  {
+    "key": "maths",
+    "label": "Maths"
+  },
+  {
+    "key": "english",
+    "label": "English"
+  },
+  {
+    "key": "marathi",
+    "label": "Marathi"
+  },
+  {
+    "key": "intelligence",
+    "label": "Intelligence Test"
+  }
+]

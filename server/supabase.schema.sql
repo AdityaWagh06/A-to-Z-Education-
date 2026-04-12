@@ -23,7 +23,7 @@ create table if not exists videos (
   title text not null,
   youtube_url text not null,
   thumbnail text,
-  subject text not null check (subject in ('maths','english','marathi','intelligence')),
+  subject text not null,
   standard int not null check (standard in (2,3,4,5,6,7,8,9,10)),
   duration text,
   created_at timestamptz not null default now()
@@ -32,7 +32,7 @@ create table if not exists videos (
 create table if not exists tests (
   id uuid primary key default gen_random_uuid(),
   title text not null,
-  subject text not null check (subject in ('maths','english','marathi','intelligence')),
+  subject text not null,
   standard int not null check (standard in (2,3,4,5,6,7,8,9,10)),
   price numeric not null default 0,
   questions jsonb not null default '[]'::jsonb,

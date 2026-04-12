@@ -12,6 +12,7 @@ const announcementRoutes = require('./routes/announcementRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
 const standardRoutes = require('./routes/standardRoutes');
+const subjectRoutes = require('./routes/subjectRoutes');
 
 dotenv.config();
 
@@ -79,6 +80,7 @@ app.use('/api/announcements', announcementRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/standards', standardRoutes);
+app.use('/api/subjects', subjectRoutes);
 
 app.get('/', (req, res) => {
     res.send('API is running...');
