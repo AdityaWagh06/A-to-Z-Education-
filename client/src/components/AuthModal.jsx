@@ -25,6 +25,7 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }) => {
     const [mobile, setMobile] = useState('');
     const [standard, setStandard] = useState(null);
     const [standards, setStandards] = useState([]);
+    const [authError, setAuthError] = useState('');
 
     useEffect(() => {
         if (!isOpen) {
@@ -33,6 +34,7 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }) => {
             setName('');
             setMobile('');
             setStandard(null);
+            setAuthError('');
             return;
         }
 
@@ -69,6 +71,7 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }) => {
 
     const handleGoogleSuccess = async (response) => {
         try {
+            setAuthError('');
             if (defaultTab === 'register') {
                 const payload = parseJwt(response.credential);
                 if (payload) {
@@ -77,24 +80,30 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }) => {
                 setGoogleCredential(response.credential);
                 setStep('details');
             } else {
-                await login(response.credential);
+                await login(response.credential, {}, 'login');
                 onClose();
                 navigate('/student/home', { replace: true });
             }
         } catch (error) {
             console.error('Login failed', error);
-            alert('Login failed. Please try again.');
+            setAuthError(error?.response?.data?.message || 'Login failed. Please try again.');
         }
     };
 
     const handleDetailsSubmit = async (e) => {
         e.preventDefault();
+        setAuthError('');
+        if (!googleCredential) {
+            setAuthError('Google session expired. Please click Sign up with Google again.');
+            setStep('initial');
+            return;
+        }
         if (!standard) {
-            alert('Please select your standard.');
+            setAuthError('Please select your standard.');
             return;
         }
         try {
-            await login(googleCredential, { name, mobile, standard: Number(standard) });
+            await login(googleCredential, { name, mobile, standard: Number(standard) }, 'register');
             onClose();
             navigate('/student/home', { replace: true });
             // Reset state
@@ -105,7 +114,7 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }) => {
             setStandard(null);
         } catch (error) {
             console.error('Registration failed', error);
-            alert('Registration failed. Please try again.');
+            setAuthError(error?.response?.data?.message || 'Registration failed. Please try again.');
         }
     };
 
@@ -148,6 +157,11 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }) => {
                                     ? 'Login to access your courses and track progress.' 
                                     : 'Join thousands of students achieving their goals.'}
                             </p>
+                            {defaultTab === 'login' && (
+                                <p className="text-xs text-blue-700 bg-blue-50 border border-blue-100 rounded-md px-3 py-2 mb-5 text-center">
+                                    New user? Please click Register first to create your account.
+                                </p>
+                            )}
 
                             <div className="w-full flex justify-center mb-6">
                                 <div className="transform scale-110"> {/* Scale up button slightly */}
@@ -168,6 +182,9 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }) => {
                             <p className="text-gray-600 text-center mb-6">
                                 Just a few more details to create your account.
                             </p>
+                            {authError && (
+                                <p className="text-sm text-red-600 text-center mb-4">{authError}</p>
+                            )}
                             
                             <div className="w-full mb-6 space-y-3">
                                 <div>
@@ -223,6 +240,9 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }) => {
                     )}
 
                     <div className="w-full border-t border-gray-100 pt-6 text-center mt-4">
+                        {step === 'initial' && authError && (
+                            <p className="text-sm text-red-600 mb-3">{authError}</p>
+                        )}
                         <p className="text-sm text-gray-500">
                             By continuing, you agree to our{' '}
                             <a href="#" className="text-primary hover:underline">Terms of Service</a>

@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
+const nodemailer = require('nodemailer');
 const { getSupabaseAdmin } = require('../config/supabase');
 const { getAdminEmails } = require('../utils/adminEmailStore');
 
@@ -37,11 +38,64 @@ const isMissingColumnError = (error, columnName) => {
     return details.includes(`'${columnName.toLowerCase()}'`) && details.includes('column');
 };
 
+const getMissingColumnFromError = (error, candidates = []) => {
+    for (const column of candidates) {
+        if (isMissingColumnError(error, column)) return column;
+    }
+    return null;
+};
+
+const createTransporter = () => {
+    const host = process.env.SMTP_HOST;
+    const port = Number(process.env.SMTP_PORT || 587);
+    const user = process.env.SMTP_USER;
+    const pass = process.env.SMTP_PASS;
+    const secure = process.env.SMTP_SECURE === 'true' || port === 465;
+
+    if (!host || !user || !pass) {
+        return null;
+    }
+
+    return nodemailer.createTransport({
+        host,
+        port,
+        secure,
+        auth: { user, pass }
+    });
+};
+
+const sendWelcomeEmail = async ({ name, email }) => {
+    const transporter = createTransporter();
+    if (!transporter || !email) return;
+
+    const from = process.env.SMTP_FROM || process.env.SMTP_USER;
+    if (!from) return;
+
+    const safeName = String(name || '').trim() || 'Student';
+    await transporter.sendMail({
+        from,
+        to: email,
+        subject: 'Welcome to A to Z Education',
+        text: `Hi ${safeName},\n\nWelcome to A to Z Education. We are glad to have you with us.\n\nStart learning and keep growing!\n\n- A to Z Education`,
+        html: `
+            <div style="font-family:Arial,sans-serif;line-height:1.6;color:#111827;max-width:640px;margin:0 auto;">
+                <h2 style="margin-bottom:10px;">Welcome to A to Z Education</h2>
+                <p style="margin:0 0 10px 0;">Hi ${safeName},</p>
+                <p style="margin:0 0 12px 0;">We are glad to have you with us.</p>
+                <p style="margin:0 0 16px 0;">Start learning and keep growing!</p>
+                <p style="font-size:12px;color:#6b7280;margin-top:20px;">This is an automated welcome email.</p>
+            </div>
+        `,
+        replyTo: process.env.SMTP_REPLY_TO || undefined
+    });
+};
+
 // @desc    Auth user & get token
 // @route   POST /api/auth/google
 // @access  Public
 const googleLogin = async (req, res) => {
-    const { token, name: providedName, mobile, standard } = req.body;
+    const { token, name: providedName, mobile, standard, mode } = req.body;
+    const authMode = String(mode || 'login').toLowerCase() === 'register' ? 'register' : 'login';
 
     try {
         let name;
@@ -102,6 +156,14 @@ const googleLogin = async (req, res) => {
         
         if (findError) throw findError;
 
+        if (!existing && authMode === 'login') {
+            return res.status(404).json({ message: 'User does not exist. Please sign up first.' });
+        }
+
+        if (existing && authMode === 'register') {
+            return res.status(409).json({ message: 'User already exists. Please log in.' });
+        }
+
         let user = existing;
         if (user) {
             const updates = { google_id: googleId, role: resolvedRole, picture, last_login_at: new Date().toISOString() };
@@ -109,23 +171,25 @@ const googleLogin = async (req, res) => {
             if (mobile) updates.mobile_no = mobile;
             if (hasValidStandard) updates.standard = parsedStandard;
 
-            let { data: updated, error: updateError } = await supabase
-                .from('users')
-                .update(updates)
-                .eq('id', user.id)
-                .select('*')
-                .single();
+            let updatePayload = { ...updates };
+            let updated = null;
+            let updateError = null;
 
-            if (updateError && isMissingColumnError(updateError, 'last_login_at')) {
-                const { last_login_at, ...fallbackUpdates } = updates;
-                const fallback = await supabase
+            for (let attempt = 0; attempt < 5; attempt += 1) {
+                const result = await supabase
                     .from('users')
-                    .update(fallbackUpdates)
+                    .update(updatePayload)
                     .eq('id', user.id)
                     .select('*')
                     .single();
-                updated = fallback.data;
-                updateError = fallback.error;
+
+                updated = result.data;
+                updateError = result.error;
+                if (!updateError) break;
+
+                const missingColumn = getMissingColumnFromError(updateError, ['last_login_at', 'mobile_no', 'standard', 'picture']);
+                if (!missingColumn) break;
+                delete updatePayload[missingColumn];
             }
 
             if (updateError) throw updateError;
@@ -144,25 +208,34 @@ const googleLogin = async (req, res) => {
                 last_login_at: new Date().toISOString()
             };
 
-            let { data: created, error: createError } = await supabase
-                .from('users')
-                .insert(insertPayload)
-                .select('*')
-                .single();
+            let createPayload = { ...insertPayload };
+            let created = null;
+            let createError = null;
 
-            if (createError && isMissingColumnError(createError, 'last_login_at')) {
-                const { last_login_at, ...fallbackInsertPayload } = insertPayload;
-                const fallback = await supabase
+            for (let attempt = 0; attempt < 5; attempt += 1) {
+                const result = await supabase
                     .from('users')
-                    .insert(fallbackInsertPayload)
+                    .insert(createPayload)
                     .select('*')
                     .single();
-                created = fallback.data;
-                createError = fallback.error;
+
+                created = result.data;
+                createError = result.error;
+                if (!createError) break;
+
+                const missingColumn = getMissingColumnFromError(createError, ['last_login_at', 'mobile_no', 'standard', 'picture']);
+                if (!missingColumn) break;
+                delete createPayload[missingColumn];
             }
 
             if (createError) throw createError;
             user = created;
+
+            try {
+                await sendWelcomeEmail({ name: user?.name, email: user?.email });
+            } catch (mailError) {
+                console.error('Welcome email error:', mailError?.message || mailError);
+            }
         }
 
         return res.json({

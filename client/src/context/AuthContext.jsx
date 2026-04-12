@@ -85,10 +85,11 @@ export const AuthProvider = ({ children }) => {
         };
     }, []);
 
-    const login = async (googleToken, extraData = {}) => {
+    const login = async (googleToken, extraData = {}, mode = 'login') => {
         const res = await axios.post(`${API_URL}/api/auth/google`, { 
             token: googleToken,
-            ...extraData 
+            ...extraData,
+            mode,
         });
         localStorage.setItem('token', res.data.token);
         axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
