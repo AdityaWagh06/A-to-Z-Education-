@@ -1,7 +1,7 @@
 import { GoogleLogin } from '@react-oauth/google';
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { BookOpen, Video, Award, Users, CheckCircle } from 'lucide-react';
 
 const Landing = () => {
@@ -41,6 +41,16 @@ const Landing = () => {
                     <p className="text-xl text-gray-600 mb-8 max-w-lg">
                         Master Maths, English, Marathi, and Intelligence Tests with interactive video lessons and quizzes.
                     </p>
+
+                    <Link
+                        to="/about"
+                        className="group mb-5 block bg-white p-4 rounded-lg shadow-md border border-blue-200 max-w-[440px] hover:shadow-lg transition"
+                    >
+                        <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">About Us</p>
+                        <h3 className="text-lg font-bold text-gray-900 mt-1">AtoZ Education - Anand Wagh</h3>
+                        <p className="text-sm text-gray-600 mt-1">Know more about our mission, author, and class resources.</p>
+                        <span className="inline-flex items-center mt-2 text-sm font-semibold text-primary group-hover:underline">View About Page</span>
+                    </Link>
 
                     <div className="bg-white p-4 rounded-lg shadow-xl inline-block border min-w-[340px]">
                         <p className="font-semibold text-center text-gray-700 mb-3">Continue with Google</p>

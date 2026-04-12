@@ -7,6 +7,7 @@ import Lessons from './pages/Lessons';
 import Test from './pages/Test';
 import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
+import About from './pages/About';
 import Navbar from './components/Navbar';
 
 function App() {
@@ -24,6 +25,7 @@ function App() {
         <Navbar />
         <Routes>
           <Route path="/" element={!user ? <Landing /> : <Navigate to={user.role === 'admin' ? "/admin/dashboard" : "/student/home"} replace />} />
+          <Route path="/about" element={<About />} />
           
           <Route path="/student/home" element={<ProtectedRoute><StudentHome /></ProtectedRoute>} />
           <Route path="/student/subjects" element={<ProtectedRoute><Subjects /></ProtectedRoute>} />
