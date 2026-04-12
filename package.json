@@ -1,5 +1,8 @@
 {
   "dependencies": {
-    "express-fileupload": "^1.5.2"
+    "@supabase/supabase-js": "^2.49.4",
+    "express-fileupload": "^1.5.2",
+    "jsonwebtoken": "^9.0.1",
+    "razorpay": "^2.9.1"
   }
 }
