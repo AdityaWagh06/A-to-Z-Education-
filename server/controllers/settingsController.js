@@ -130,36 +130,89 @@ const sendBroadcastEmail = async (req, res) => {
     }
 };
 
-const getStudentPurchases = async (_req, res) => {
+const getStudentPurchases = async (req, res) => {
     try {
         const supabase = getSupabaseAdmin();
+        const emailQuery = normalizeEmail(req.query?.email);
 
-        const [{ data: users, error: usersError }, { data: tests, error: testsError }] = await Promise.all([
-            supabase
-                .from('users')
-                .select('id, name, email, purchased_tests')
-                .eq('role', 'student')
-                .order('name', { ascending: true }),
-            supabase
-                .from('tests')
-                .select('id, title, subject, price, is_locked')
-                .order('created_at', { ascending: false })
-        ]);
+        const { data: tests, error: testsError } = await supabase
+            .from('tests')
+            .select('id, title, subject, standard, price, is_locked')
+            .order('created_at', { ascending: false });
 
-        if (usersError) throw usersError;
         if (testsError) throw testsError;
 
+        if (emailQuery) {
+            let user = null;
+
+            const userPrimary = await supabase
+                .from('users')
+                .select('id, name, email, purchased_tests, purchased_standard_boxes')
+                .eq('role', 'student')
+                .ilike('email', emailQuery)
+                .maybeSingle();
+
+            if (userPrimary.error) {
+                const details = `${userPrimary.error?.message || ''} ${userPrimary.error?.details || ''}`.toLowerCase();
+                if (details.includes('purchased_standard_boxes') && details.includes('column')) {
+                    const userFallback = await supabase
+                        .from('users')
+                        .select('id, name, email, purchased_tests')
+                        .eq('role', 'student')
+                        .ilike('email', emailQuery)
+                        .maybeSingle();
+
+                    if (userFallback.error) throw userFallback.error;
+                    user = userFallback.data
+                        ? { ...userFallback.data, purchased_standard_boxes: [] }
+                        : null;
+                } else {
+                    throw userPrimary.error;
+                }
+            } else {
+                user = userPrimary.data;
+            }
+
+            if (!user) {
+                return res.status(404).json({ message: 'Student not found for this email.' });
+            }
+
+            const directPurchasedTests = [...new Set(user.purchased_tests || [])];
+            const purchasedStandards = [...new Set((user.purchased_standard_boxes || []).map((value) => Number(value)))];
+            const paidTestsByStandard = new Set(
+                (tests || [])
+                    .filter((test) => purchasedStandards.includes(Number(test.standard)) && (Boolean(test.is_locked) || Number(test.price || 0) > 0))
+                    .map((test) => test.id)
+            );
+            const effectivePurchasedTests = [...new Set([...directPurchasedTests, ...paidTestsByStandard])];
+
+            return res.json({
+                user: {
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                    purchasedTests: directPurchasedTests,
+                    purchasedStandardBoxes: purchasedStandards,
+                    effectivePurchasedTests
+                },
+                tests: (tests || []).map((t) => ({
+                    id: t.id,
+                    title: t.title,
+                    subject: t.subject,
+                    standard: Number(t.standard || 0),
+                    price: Number(t.price || 0),
+                    isLocked: Boolean(t.is_locked)
+                }))
+            });
+        }
+
         return res.json({
-            users: (users || []).map((u) => ({
-                id: u.id,
-                name: u.name,
-                email: u.email,
-                purchasedTests: u.purchased_tests || []
-            })),
+            users: [],
             tests: (tests || []).map((t) => ({
                 id: t.id,
                 title: t.title,
                 subject: t.subject,
+                standard: Number(t.standard || 0),
                 price: Number(t.price || 0),
                 isLocked: Boolean(t.is_locked)
             }))

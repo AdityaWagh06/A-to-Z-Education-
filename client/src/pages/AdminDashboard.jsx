@@ -25,6 +25,25 @@ const AdminDashboard = () => {
         revenue: 0,
     });
     const [overviewLoading, setOverviewLoading] = useState(false);
+    const [subjects, setSubjects] = useState([]);
+
+    const defaultSubjects = [
+        { key: 'maths', label: 'Maths' },
+        { key: 'english', label: 'English' },
+        { key: 'marathi', label: 'Marathi' },
+        { key: 'intelligence', label: 'Intelligence Test' },
+    ];
+
+    const fetchSubjects = async () => {
+        try {
+            const { data } = await axios.get(`${API_URL}/api/subjects`);
+            const list = Array.isArray(data) && data.length > 0 ? data : defaultSubjects;
+            setSubjects(list);
+        } catch (err) {
+            console.error('Error loading subjects:', err);
+            setSubjects(defaultSubjects);
+        }
+    };
 
     const fetchOverviewStats = async () => {
         try {
@@ -57,6 +76,7 @@ const AdminDashboard = () => {
 
     useEffect(() => {
         fetchOverviewStats();
+        fetchSubjects();
         return () => {
             if (feedbackTimeoutRef.current) {
                 clearTimeout(feedbackTimeoutRef.current);
@@ -130,6 +150,16 @@ const AdminDashboard = () => {
         const [loading, setLoading] = useState(false);
         const [videos, setVideos] = useState([]);
         const [editingId, setEditingId] = useState(null);
+
+        useEffect(() => {
+            const firstSubject = subjects[0]?.key || 'maths';
+            setFormData((prev) => {
+                if (subjects.length > 0 && !subjects.some((s) => s.key === prev.subject)) {
+                    return { ...prev, subject: firstSubject };
+                }
+                return prev;
+            });
+        }, [subjects]);
 
         useEffect(() => {
             fetchVideos();
@@ -206,10 +236,9 @@ const AdminDashboard = () => {
                                 <label className="block text-sm font-medium text-gray-700">Subject</label>
                                 <select className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border bg-gray-50" required 
                                     value={formData.subject} onChange={e => setFormData({...formData, subject: e.target.value})}>
-                                    <option value="maths">Maths</option>
-                                    <option value="english">English</option>
-                                    <option value="marathi">Marathi</option>
-                                    <option value="intelligence">Intelligence Test</option>
+                                    {subjects.map((subject) => (
+                                        <option key={subject.key} value={subject.key}>{subject.label}</option>
+                                    ))}
                                 </select>
                             </div>
                             <div>
@@ -385,6 +414,16 @@ const AdminDashboard = () => {
         const [paidBoxes, setPaidBoxes] = useState([]);
         const [boxForm, setBoxForm] = useState({ standard: 2, title: '', description: '', amount: '' });
         const [boxSaving, setBoxSaving] = useState(false);
+
+        useEffect(() => {
+            const firstSubject = subjects[0]?.key || 'maths';
+            setFormData((prev) => {
+                if (subjects.length > 0 && !subjects.some((s) => s.key === prev.subject)) {
+                    return { ...prev, subject: firstSubject };
+                }
+                return prev;
+            });
+        }, [subjects]);
 
         useEffect(() => {
             fetchTests();
@@ -583,10 +622,9 @@ const AdminDashboard = () => {
                                 onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                                 className="w-full border rounded-lg p-2"
                             >
-                                <option value="maths">Maths</option>
-                                <option value="english">English</option>
-                                <option value="marathi">Marathi</option>
-                                <option value="intelligence">Intelligence Test</option>
+                                {subjects.map((subject) => (
+                                    <option key={subject.key} value={subject.key}>{subject.label}</option>
+                                ))}
                             </select>
                         </div>
                         <div>
@@ -790,23 +828,94 @@ const AdminDashboard = () => {
     };
 
     const ManageSubjects = () => {
-        const subjects = [
-            { key: 'maths', label: 'Maths' },
-            { key: 'english', label: 'English' },
-            { key: 'marathi', label: 'Marathi' },
-            { key: 'intelligence', label: 'Intelligence Test' },
-        ];
+        const [formData, setFormData] = useState({ key: '', label: '' });
+        const [saving, setSaving] = useState(false);
+
+        const handleSubmit = async (e) => {
+            e.preventDefault();
+            const payload = {
+                key: formData.key.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, ''),
+                label: formData.label.trim(),
+            };
+
+            if (!payload.key || !payload.label) {
+                notify('error', 'Subject key and label are required.');
+                return;
+            }
+
+            try {
+                setSaving(true);
+                const { data } = await axios.post(`${API_URL}/api/subjects`, payload, getAuthConfig());
+                setSubjects(Array.isArray(data) ? data : subjects);
+                setFormData({ key: '', label: '' });
+                notify('success', 'Subject added.');
+            } catch (error) {
+                console.error(error);
+                notify('error', error?.response?.data?.message || 'Could not add subject.');
+            } finally {
+                setSaving(false);
+            }
+        };
+
+        const handleDelete = async (key) => {
+            try {
+                const { data } = await axios.delete(`${API_URL}/api/subjects/${key}`, getAuthConfig());
+                setSubjects(Array.isArray(data) ? data : []);
+                notify('success', 'Subject deleted.');
+            } catch (error) {
+                console.error(error);
+                notify('error', error?.response?.data?.message || 'Could not delete subject.');
+            }
+        };
 
         return (
             <div className="bg-white p-6 rounded-card shadow-md max-w-4xl mx-auto">
                 <h2 className="text-2xl font-bold mb-2">Subjects</h2>
-                <p className="text-gray-600 mb-6">These subjects are currently available across lessons and tests.</p>
+                <p className="text-gray-600 mb-6">Add or remove subject options used in admin forms.</p>
+
+                <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+                    <input
+                        type="text"
+                        className="border rounded-lg p-2"
+                        placeholder="Subject key (e.g. maths)"
+                        value={formData.key}
+                        onChange={(e) => setFormData({ ...formData, key: e.target.value })}
+                        required
+                    />
+                    <input
+                        type="text"
+                        className="border rounded-lg p-2"
+                        placeholder="Subject label (e.g. Maths)"
+                        value={formData.label}
+                        onChange={(e) => setFormData({ ...formData, label: e.target.value })}
+                        required
+                    />
+                    <button
+                        type="submit"
+                        disabled={saving}
+                        className="bg-primary text-white rounded-lg font-bold px-4 py-2 hover:bg-blue-700 transition disabled:opacity-60"
+                    >
+                        {saving ? 'Saving...' : 'Add Subject'}
+                    </button>
+                </form>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {subjects.map((subject) => (
                         <div key={subject.key} className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                            <h3 className="font-semibold text-gray-800">{subject.label}</h3>
-                            <p className="text-xs text-gray-500 mt-1 uppercase tracking-wide">Key: {subject.key}</p>
+                            <div className="flex items-start justify-between gap-3">
+                                <div>
+                                    <h3 className="font-semibold text-gray-800">{subject.label}</h3>
+                                    <p className="text-xs text-gray-500 mt-1 uppercase tracking-wide">Key: {subject.key}</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => handleDelete(subject.key)}
+                                    className="text-red-600 hover:bg-red-50 rounded p-1.5 transition"
+                                    title="Delete subject"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                            </div>
                         </div>
                     ))}
                 </div>
@@ -1112,91 +1221,122 @@ const AdminDashboard = () => {
     };
 
     const ManageStudentPurchases = () => {
-        const [users, setUsers] = useState([]);
         const [tests, setTests] = useState([]);
-        const [selectedUserId, setSelectedUserId] = useState('');
+        const [searchEmail, setSearchEmail] = useState('');
+        const [selectedUser, setSelectedUser] = useState(null);
         const [selectedPurchases, setSelectedPurchases] = useState([]);
+        const [searching, setSearching] = useState(false);
         const [saving, setSaving] = useState(false);
+        const [localStatus, setLocalStatus] = useState(null);
 
         useEffect(() => {
             const loadData = async () => {
                 try {
                     const { data } = await axios.get(`${API_URL}/api/settings/student-purchases`, getAuthConfig());
-                    setUsers(data.users || []);
                     setTests((data.tests || []).filter((t) => Boolean(t.isLocked) || Number(t.price) > 0));
-
-                    if (data.users?.length) {
-                        setSelectedUserId(data.users[0].id);
-                        setSelectedPurchases(data.users[0].purchasedTests || []);
-                    }
                 } catch (error) {
                     console.error(error);
-                    notify('error', 'Could not load student purchase data.');
+                    setLocalStatus({ type: 'error', text: 'Could not load student purchase data.' });
                 }
             };
 
             loadData();
         }, []);
 
-        const handleSelectUser = (userId) => {
-            setSelectedUserId(userId);
-            const user = users.find((u) => u.id === userId);
-            setSelectedPurchases(user?.purchasedTests || []);
+        const handleSearchStudent = async () => {
+            const email = searchEmail.trim().toLowerCase();
+            if (!email) {
+                setLocalStatus({ type: 'error', text: 'Please enter student email.' });
+                return;
+            }
+
+            try {
+                setSearching(true);
+                const { data } = await axios.get(`${API_URL}/api/settings/student-purchases?email=${encodeURIComponent(email)}`, getAuthConfig());
+                setSelectedUser(data.user || null);
+                setSelectedPurchases(
+                    (data.user?.effectivePurchasedTests || data.user?.purchasedTests || []).map((id) => String(id))
+                );
+                setLocalStatus({ type: 'success', text: 'Student found.' });
+            } catch (error) {
+                console.error(error);
+                setSelectedUser(null);
+                setSelectedPurchases([]);
+                setLocalStatus({ type: 'error', text: error?.response?.data?.message || 'Student not found.' });
+            } finally {
+                setSearching(false);
+            }
         };
 
         const togglePurchase = (testId) => {
+            const normalizedId = String(testId);
             setSelectedPurchases((prev) => (
-                prev.includes(testId)
-                    ? prev.filter((id) => id !== testId)
-                    : [...prev, testId]
+                prev.includes(normalizedId)
+                    ? prev.filter((id) => id !== normalizedId)
+                    : [...prev, normalizedId]
             ));
         };
 
         const savePurchases = async () => {
-            if (!selectedUserId) return;
+            if (!selectedUser?.id) return;
 
             try {
                 setSaving(true);
                 const { data } = await axios.put(
-                    `${API_URL}/api/settings/student-purchases/${selectedUserId}`,
+                    `${API_URL}/api/settings/student-purchases/${selectedUser.id}`,
                     { purchasedTests: selectedPurchases },
                     getAuthConfig()
                 );
 
-                setUsers((prev) => prev.map((u) => (
-                    u.id === selectedUserId
-                        ? { ...u, purchasedTests: data.purchasedTests || [] }
-                        : u
-                )));
+                setSelectedUser((prev) => prev ? ({ ...prev, purchasedTests: data.purchasedTests || [] }) : prev);
 
-                notify('success', 'Student purchases updated.');
+                setLocalStatus({ type: 'success', text: 'Student purchases updated.' });
             } catch (error) {
                 console.error(error);
-                notify('error', error?.response?.data?.message || 'Could not save purchases.');
+                setLocalStatus({ type: 'error', text: error?.response?.data?.message || 'Could not save purchases.' });
             } finally {
                 setSaving(false);
             }
         };
 
-        const selectedUser = users.find((u) => u.id === selectedUserId);
+        const selectedPurchaseSet = new Set((selectedPurchases || []).map((id) => String(id)));
 
         return (
             <div className="bg-white p-6 rounded-card shadow-md max-w-5xl mx-auto">
                 <h2 className="text-2xl font-bold mb-2">Student Test Purchases</h2>
-                <p className="text-gray-600 mb-6">Manually add/remove paid tests for students in case of missed payment callbacks.</p>
+                <p className="text-gray-600 mb-6">Search by student email, then manage only that student&apos;s paid tests.</p>
+
+                {localStatus && (
+                    <div className={`mb-4 text-sm border rounded-lg px-3 py-2 ${localStatus.type === 'error' ? 'text-red-700 bg-red-50 border-red-200' : 'text-green-700 bg-green-50 border-green-200'}`}>
+                        {localStatus.text}
+                    </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Select Student</label>
-                        <select
-                            value={selectedUserId}
-                            onChange={(e) => handleSelectUser(e.target.value)}
-                            className="w-full border rounded-lg p-2"
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Student Email</label>
+                        <form
+                            className="flex gap-2"
+                            onSubmit={(e) => {
+                                e.preventDefault();
+                                handleSearchStudent();
+                            }}
                         >
-                            {users.map((u) => (
-                                <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
-                            ))}
-                        </select>
+                            <input
+                                type="email"
+                                value={searchEmail}
+                                onChange={(e) => setSearchEmail(e.target.value)}
+                                placeholder="student@example.com"
+                                className="w-full border rounded-lg p-2"
+                            />
+                            <button
+                                type="submit"
+                                disabled={searching}
+                                className="bg-primary text-white px-4 py-2 rounded-lg disabled:opacity-60"
+                            >
+                                {searching ? 'Searching...' : 'Find'}
+                            </button>
+                        </form>
                     </div>
                     <div className="rounded-lg border bg-gray-50 p-3 text-sm">
                         <p className="text-gray-500">Selected</p>
@@ -1211,7 +1351,7 @@ const AdminDashboard = () => {
                     ) : (
                         <div className="divide-y">
                             {tests.map((test) => {
-                                const checked = selectedPurchases.includes(test.id);
+                                const checked = selectedPurchaseSet.has(String(test.id));
                                 return (
                                     <label key={test.id} className="flex items-center gap-3 p-4 hover:bg-gray-50 cursor-pointer">
                                         <input
@@ -1235,7 +1375,7 @@ const AdminDashboard = () => {
                 <div className="mt-5 flex justify-end">
                     <button
                         onClick={savePurchases}
-                        disabled={saving || !selectedUserId}
+                        disabled={saving || !selectedUser?.id}
                         className="bg-primary text-white px-5 py-2 rounded-lg disabled:opacity-60"
                     >
                         {saving ? 'Saving...' : 'Save Purchase Access'}
