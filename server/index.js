@@ -40,9 +40,7 @@ app.use(fileUpload({
     limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
 }));
 
-app.use(helmet({
-    crossOriginResourcePolicy: { policy: 'cross-origin' }
-}));
+
 
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -57,7 +55,9 @@ app.use('/api', apiLimiter);
 const allowedOrigins = [
     process.env.CLIENT_ORIGIN,
     'http://localhost:5173',
-    'http://127.0.0.1:5173'
+    'http://127.0.0.1:5173',
+    'https://a-to-z-education-d98u.vercel.app'
+
 ].filter(Boolean);
 
 app.use(cors({
