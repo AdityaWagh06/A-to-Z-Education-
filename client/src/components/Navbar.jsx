@@ -101,7 +101,7 @@ const Navbar = () => {
                         <div className="flex items-center min-w-0">
                             <Link to="/" className="flex items-center gap-2 text-primary min-w-0">
                                 <img src={SITE_LOGO_URL} alt="A to Z Education logo" className="h-12 w-12 sm:h-14 sm:w-14 object-contain" />
-                                <span className="font-extrabold text-[11px] leading-tight tracking-tight sm:text-xl max-w-[92px] sm:max-w-none">A to Z Education</span>
+                                <span className="font-extrabold text-xs leading-tight tracking-tight sm:text-xl max-w-[106px] sm:max-w-none">A to Z Education</span>
                             </Link>
                         </div>
                         
