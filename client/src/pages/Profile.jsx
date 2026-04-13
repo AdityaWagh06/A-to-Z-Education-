@@ -82,11 +82,11 @@ const Profile = () => {
     };
 
     return (
-        <div className="p-8 max-w-6xl mx-auto">
-            <div className="bg-white rounded-card shadow-lg p-8 flex flex-col md:flex-row items-center gap-8">
+        <div className="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto">
+            <div className="bg-white rounded-card shadow-lg p-5 sm:p-8 flex flex-col md:flex-row items-center gap-6 sm:gap-8">
                 <AnimatedAnimalAvatar user={user} size="lg" className="border-4 border-primary/20" />
                 <div className="text-center md:text-left">
-                    <h1 className="text-3xl font-bold text-gray-800">{user.name}</h1>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">{user.name}</h1>
                     <p className="text-gray-500 text-lg">{user.email}</p>
                     <div className="mt-4 flex flex-wrap justify-center md:justify-start gap-2">
                         <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold capitalize">{user.role}</span>

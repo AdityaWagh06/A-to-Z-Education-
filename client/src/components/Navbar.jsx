@@ -97,15 +97,16 @@ const Navbar = () => {
         <>
             <nav className="bg-white sticky top-0 z-50 shadow-sm border-b border-gray-100">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between h-16">
-                        <div className="flex items-center">
-                            <Link to="/" className="flex-shrink-0 flex items-center gap-2 text-primary">
+                    <div className="flex justify-between items-center min-h-16 py-2 gap-2 sm:gap-4">
+                        <div className="flex items-center min-w-0">
+                            <Link to="/" className="flex items-center gap-2 text-primary min-w-0">
                                 <img src={SITE_LOGO_URL} alt="A to Z Education logo" className="h-12 w-12 sm:h-14 sm:w-14 object-contain" />
-                                <span className="font-extrabold text-xl tracking-tight">A to Z Education</span>
+                                <span className="hidden sm:block font-extrabold text-xl tracking-tight truncate">A to Z Education</span>
+                                <span className="sm:hidden font-extrabold text-base tracking-tight">A2Z</span>
                             </Link>
                         </div>
                         
-                        <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-2 sm:gap-6 flex-wrap justify-end">
                             {user?.role === 'student' && (
                                 <div className="hidden md:flex items-center gap-6">
                                     <Link to="/student/home" className="text-gray-600 hover:text-primary font-medium flex items-center gap-1 transition-colors">
@@ -252,22 +253,22 @@ const Navbar = () => {
                                     )}
                                 </div>
                             ) : (
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                                     <Link
                                         to="/about"
-                                        className="px-4 py-2 rounded-md font-semibold text-gray-700 border border-gray-300 hover:bg-gray-50 transition flex items-center gap-2"
+                                        className="px-3 sm:px-4 py-2 rounded-md font-semibold text-gray-700 border border-gray-300 hover:bg-gray-50 transition flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base whitespace-nowrap"
                                     >
-                                        <Info size={16} /> About
+                                        <Info size={16} /> <span className="hidden sm:inline">About</span>
                                     </Link>
                                     <button 
                                         onClick={openLogin}
-                                        className="px-6 py-2 rounded-md font-bold text-primary border border-primary hover:bg-primary/5 transition"
+                                        className="px-3 sm:px-6 py-2 rounded-md font-bold text-primary border border-primary hover:bg-primary/5 transition text-sm sm:text-base whitespace-nowrap"
                                     >
                                         Login
                                     </button>
                                     <button 
                                         onClick={openRegister}
-                                        className="px-6 py-2 rounded-md font-bold bg-primary text-white hover:bg-opacity-90 transition shadow-md hover:shadow-lg"
+                                        className="px-3 sm:px-6 py-2 rounded-md font-bold bg-primary text-white hover:bg-opacity-90 transition shadow-md hover:shadow-lg text-sm sm:text-base whitespace-nowrap"
                                     >
                                         Register
                                     </button>

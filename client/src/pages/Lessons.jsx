@@ -81,7 +81,7 @@ const Lessons = () => {
     const isLastVideo = selectedVideo && videos.length > 0 && videos[videos.length - 1]._id === selectedVideo._id;
 
     return (
-        <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-gray-50">
+        <div className="flex flex-col md:flex-row min-h-[calc(100vh-64px)] md:h-[calc(100vh-64px)] md:overflow-hidden bg-gray-50">
             {/* Sidebar List */}
             <div className="w-1/4 bg-white border-r border-gray-300 overflow-y-auto hidden md:block shadow-sm">
                 <div className="p-4 font-bold text-lg border-b border-gray-300 capitalize sticky top-0 bg-white z-10 shadow-sm text-gray-800">{subject} Lessons</div>
@@ -117,7 +117,7 @@ const Lessons = () => {
             </div>
 
             {/* Main Video Area */}
-            <div className="flex-1 p-8 bg-gray-50 overflow-y-auto">
+            <div className="flex-1 p-4 sm:p-6 md:p-8 bg-gray-50 overflow-y-auto">
                 {selectedVideo ? (
                     <div className="max-w-4xl mx-auto"> {/* Adjusted for better fit */}
                         {/* Aspect Ratio Wrapper (16:9) */}
@@ -150,8 +150,27 @@ const Lessons = () => {
                         <div className="mt-6 bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                             <h1 className="text-2xl font-bold text-gray-800">{selectedVideo.title}</h1>
                             <p className="text-gray-600 mt-2 leading-relaxed">{selectedVideo.description || 'Watch and learn key concepts in this lesson.'}</p>
+
+                            <div className="mt-6 md:hidden border border-gray-200 rounded-lg overflow-hidden">
+                                <div className="px-3 py-2 bg-gray-50 text-sm font-semibold text-gray-700">All Lessons</div>
+                                <div className="max-h-64 overflow-y-auto">
+                                    {videos.map((video) => {
+                                        const active = selectedVideo?._id === video._id;
+                                        return (
+                                            <button
+                                                key={video._id}
+                                                type="button"
+                                                onClick={() => setSelectedVideo(video)}
+                                                className={`w-full text-left px-3 py-2.5 text-sm border-t first:border-t-0 transition ${active ? 'bg-blue-50 text-blue-700 font-semibold' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                                            >
+                                                {video.title}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
                             
-                            <div className="mt-8 flex justify-between items-center bg-gray-50 p-4 rounded-lg border border-gray-100">
+                            <div className="mt-8 flex flex-col sm:flex-row gap-3 sm:gap-0 sm:justify-between sm:items-center bg-gray-50 p-4 rounded-lg border border-gray-100">
                                 <button 
                                     onClick={handlePrevLesson}
                                     disabled={isFirstVideo}
@@ -168,7 +187,7 @@ const Lessons = () => {
                                     Previous
                                 </button>
 
-                                <span className="text-sm font-medium text-gray-500">
+                                <span className="text-sm font-medium text-gray-500 text-center sm:text-left">
                                     {videos.length > 0 && selectedVideo && (
                                         `Lesson ${videos.findIndex(v => v._id === selectedVideo._id) + 1} of ${videos.length}`
                                     )}
@@ -195,7 +214,7 @@ const Lessons = () => {
                         </div>
                     </div>
                 ) : (
-                   <div className="flex flex-col items-center justify-center h-full text-gray-500 opacity-60">
+                         <div className="flex flex-col items-center justify-center min-h-[50vh] text-gray-500 opacity-60">
                         <div className="text-6xl mb-4 grayscale">📺</div>
                         <p className="text-xl font-medium">Select a lesson from the sidebar to start learning.</p>
                    </div>

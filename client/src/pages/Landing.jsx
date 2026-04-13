@@ -30,15 +30,15 @@ const Landing = () => {
 
     return (
         <div className="min-h-screen bg-gray-50 font-sans">
-            <header className="max-w-7xl mx-auto px-6 py-12 md:py-20 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            <header className="max-w-7xl mx-auto px-4 sm:px-6 py-10 md:py-20 grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-12 items-center">
                 <div>
                     <span className="bg-blue-100 text-blue-700 font-bold px-3 py-1 rounded-full text-sm mb-4 inline-block">
                         Trusted by 10,000+ Students
                     </span>
-                    <h1 className="text-5xl md:text-6xl font-extrabold text-gray-900 leading-tight mb-6">
+                    <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold text-gray-900 leading-tight mb-6">
                         Make Learning <br /> <span className="text-primary">Fun & Easy</span>
                     </h1>
-                    <p className="text-xl text-gray-600 mb-8 max-w-lg">
+                    <p className="text-lg sm:text-xl text-gray-600 mb-8 max-w-lg">
                         Master Maths, English, Marathi, and Intelligence Tests with interactive video lessons and quizzes.
                     </p>
 
@@ -52,7 +52,7 @@ const Landing = () => {
                         <span className="inline-flex items-center mt-2 text-sm font-semibold text-primary group-hover:underline">View About Page</span>
                     </Link>
 
-                    <div className="bg-white p-4 rounded-lg shadow-xl inline-block border min-w-[340px]">
+                    <div className="bg-white p-4 rounded-lg shadow-xl border w-full max-w-[420px]">
                         <p className="font-semibold text-center text-gray-700 mb-3">Continue with Google</p>
                         <div className="flex justify-center">
                             <GoogleLogin
@@ -66,7 +66,7 @@ const Landing = () => {
                         {message && <p className="text-xs text-center text-red-600 mt-3">{message}</p>}
                     </div>
 
-                    <div className="mt-8 flex gap-4 text-sm text-gray-500 font-medium">
+                    <div className="mt-8 flex flex-wrap gap-3 text-sm text-gray-500 font-medium">
                         <span className="flex items-center gap-1"><CheckCircle size={16} className="text-green-500" /> Secure Google Sign-In</span>
                         <span className="flex items-center gap-1"><CheckCircle size={16} className="text-green-500" /> Instant Access</span>
                     </div>
@@ -82,7 +82,7 @@ const Landing = () => {
             </header>
 
             <section id="features" className="py-20 bg-white">
-                <div className="max-w-7xl mx-auto px-6 text-center">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center">
                     <h2 className="text-3xl font-bold mb-12 text-gray-800">Why Choose A to Z Education?</h2>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                         <Feature icon={<Video size={32} />} title="Interactive Video Lessons" desc="High-quality lessons for each standard and subject." />

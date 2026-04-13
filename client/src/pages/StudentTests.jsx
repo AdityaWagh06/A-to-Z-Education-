@@ -13,7 +13,7 @@ const StudentTests = () => {
     ];
 
     return (
-        <div className="p-8 max-w-6xl mx-auto">
+        <div className="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto">
             <header className="mb-8">
                 <h1 className="text-3xl font-bold text-gray-800">Practice Tests</h1>
                 <p className="text-gray-500 mt-2">
@@ -39,7 +39,7 @@ const StudentTests = () => {
                                 <div className={`p-3 rounded-full ${sub.color}`}>
                                     <FileText className="w-7 h-7" />
                                 </div>
-                                <h3 className="text-2xl font-bold text-gray-800">{sub.name}</h3>
+                                <h3 className="text-xl sm:text-2xl font-bold text-gray-800">{sub.name}</h3>
                             </div>
                             <p className="text-gray-600 mb-5">Attempt chapter-wise and full-length tests for {sub.name}.</p>
                             <div className="inline-flex items-center gap-2 text-primary font-semibold">

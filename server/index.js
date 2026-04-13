@@ -54,17 +54,30 @@ app.use('/api', apiLimiter);
 
 const allowedOrigins = [
     process.env.CLIENT_ORIGIN,
+    ...(process.env.CLIENT_ORIGINS || '').split(',').map((origin) => origin.trim()).filter(Boolean),
     'http://localhost:5173',
     'http://127.0.0.1:5173',
     'https://a-to-z-education-d98u.vercel.app'
-
 ].filter(Boolean);
+
+const allowedOriginPatterns = [
+    /^https:\/\/a-to-z-education-[a-z0-9-]+\.vercel\.app$/i
+];
 
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
+        if (!origin) {
             return callback(null, true);
         }
+
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+
+        if (allowedOriginPatterns.some((pattern) => pattern.test(origin))) {
+            return callback(null, true);
+        }
+
         return callback(new Error('Not allowed by CORS'));
     }
 }));

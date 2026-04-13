@@ -92,7 +92,7 @@ const AdminDashboard = () => {
 
     const Overview = () => (
         <div className="space-y-6 mb-8">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <h2 className="text-2xl font-bold text-gray-800">Performance Dashboard</h2>
                 <button
                     type="button"
@@ -369,7 +369,8 @@ const AdminDashboard = () => {
 
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                     <div className="p-4 bg-gray-50 border-b font-bold text-gray-700">Existing Classes</div>
-                    <table className="w-full text-left">
+                    <div className="overflow-x-auto">
+                    <table className="w-full min-w-[560px] text-left">
                         <thead className="bg-gray-50 border-b">
                             <tr>
                                 <th className="p-4 text-gray-600 font-semibold">Class Name</th>
@@ -393,6 +394,7 @@ const AdminDashboard = () => {
                             )}
                         </tbody>
                     </table>
+                    </div>
                 </div>
             </div>
         );
@@ -604,7 +606,7 @@ const AdminDashboard = () => {
                         />
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Standard</label>
                             <select
@@ -714,14 +716,14 @@ const AdminDashboard = () => {
                     ) : (
                         <div className="space-y-3">
                             {tests.map(test => (
-                                <div key={test._id} className="flex justify-between items-center border p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition shadow-sm">
-                                    <div className="flex items-center gap-4">
+                                <div key={test._id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 border p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition shadow-sm">
+                                    <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                                         <div className="bg-white p-2 rounded-full shadow-sm">
                                             <FileText className="text-indigo-600" size={24} />
                                         </div>
-                                        <div>
+                                        <div className="min-w-0">
                                             <h4 className="font-bold text-gray-900">{test.title}</h4>
-                                            <div className="flex gap-2 text-xs mt-1">
+                                            <div className="flex flex-wrap gap-2 text-xs mt-1">
                                                 <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded">Std {test.standard}</span>
                                                 <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded capitalize">{test.subject}</span>
                                                 <span className={`px-2 py-0.5 rounded ${test.isLocked ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
@@ -730,7 +732,7 @@ const AdminDashboard = () => {
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-3 self-end sm:self-auto">
                                         {test.pdfUrl && (
                                             <a href={test.pdfUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-blue-600 hover:underline">
                                                 View PDF
@@ -1385,8 +1387,38 @@ const AdminDashboard = () => {
         );
     };
 
+    const tabs = [
+        { key: 'overview', label: 'Overview', icon: BarChart },
+        { key: 'videos', label: 'Videos', icon: Video },
+        { key: 'classes', label: 'Classes', icon: Book },
+        { key: 'subjects', label: 'Subjects', icon: Book },
+        { key: 'tests', label: 'Tests', icon: FileText },
+        { key: 'news', label: 'News', icon: Bell },
+        { key: 'admin-access', label: 'Admin Access', icon: ShieldCheck },
+        { key: 'broadcast', label: 'Broadcast', icon: Mail },
+        { key: 'student-purchases', label: 'Purchases', icon: Wallet },
+    ];
+
     return (
-        <div className="flex h-[calc(100vh-64px)] bg-gray-100">
+        <div className="min-h-[calc(100vh-64px)] bg-gray-100 flex flex-col md:flex-row">
+            <div className="md:hidden bg-white border-b border-gray-200 px-3 py-3 overflow-x-auto">
+                <div className="flex gap-2 min-w-max">
+                    {tabs.map((tab) => {
+                        const Icon = tab.icon;
+                        const active = activeTab === tab.key;
+                        return (
+                            <button
+                                key={tab.key}
+                                type="button"
+                                onClick={() => setActiveTab(tab.key)}
+                                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border transition ${active ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-white text-gray-600 border-gray-200'}`}
+                            >
+                                <Icon size={16} /> {tab.label}
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
              {/* Admin Sidebar */}
             <div className="w-64 bg-white shadow-lg p-4 space-y-2 hidden md:block">
                 <button onClick={() => setActiveTab('overview')} className={`w-full text-left p-3 rounded flex items-center gap-3 ${activeTab === 'overview' ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>
@@ -1419,8 +1451,8 @@ const AdminDashboard = () => {
             </div>
 
             {/* Content */}
-            <div className="flex-1 p-8 overflow-y-auto">
-                <h1 className="text-3xl font-bold mb-8 capitalize">{activeTab.replace('-', ' ')}</h1>
+            <div className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto">
+                <h1 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8 capitalize">{activeTab.replace('-', ' ')}</h1>
                 {feedback && (
                     <div className={`mb-6 rounded-lg border px-4 py-3 text-sm ${feedback.type === 'success' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
                         {feedback.text}

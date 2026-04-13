@@ -14,7 +14,7 @@ const Subjects = () => {
     ];
 
     return (
-        <div className="p-8 max-w-6xl mx-auto">
+        <div className="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto">
              <header className="mb-8">
                 <h1 className="text-3xl font-bold text-gray-800">Learn by Subject</h1>
                      <p className="text-gray-500 mt-2">Standard: <span className="font-semibold">{user?.standard || 'Not selected'}</span>. Choose a subject to view lessons and tests.</p>
@@ -29,7 +29,7 @@ const Subjects = () => {
                                 <h3 className="text-2xl font-bold text-gray-800">{sub.name}</h3>
                             </div>
                             <p className="text-gray-600 mb-6">Master the fundamentals of {sub.name} with our curated video lessons and practice tests.</p>
-                            <div className="flex gap-4">
+                            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                                 <Link to={`/student/lessons/${sub.name.toLowerCase()}?standard=${user?.standard || ''}`} className="flex-1 bg-primary text-white text-center font-bold py-2 rounded-lg hover:bg-opacity-90 transition">
                                     View Lessons
                                 </Link>
