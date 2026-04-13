@@ -12,24 +12,50 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const [authSource, setAuthSource] = useState('none');
 
+    const persistUser = (nextUser) => {
+        if (nextUser) {
+            localStorage.setItem('authUser', JSON.stringify(nextUser));
+        } else {
+            localStorage.removeItem('authUser');
+        }
+        setUser(nextUser);
+    };
+
     useEffect(() => {
         let isMounted = true;
 
         const hydrateAuth = async () => {
             try {
                 const token = localStorage.getItem('token');
+                const cachedUserRaw = localStorage.getItem('authUser');
+                const cachedUser = cachedUserRaw ? JSON.parse(cachedUserRaw) : null;
+
+                if (cachedUser && isMounted) {
+                    persistUser(cachedUser);
+                    setAuthSource('cached');
+                }
+
                 if (token) {
                     try {
                         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
                         const res = await axios.get(`${API_URL}/api/auth/profile`);
                         if (isMounted) {
-                            setUser(res.data);
+                            persistUser(res.data);
                             setAuthSource('backend');
                         }
                         return;
-                    } catch {
-                        localStorage.removeItem('token');
-                        delete axios.defaults.headers.common['Authorization'];
+                    } catch (error) {
+                        const status = Number(error?.response?.status || 0);
+                        if (status === 401 || status === 403) {
+                            localStorage.removeItem('token');
+                            localStorage.removeItem('authUser');
+                            delete axios.defaults.headers.common['Authorization'];
+                            if (isMounted) {
+                                persistUser(null);
+                                setAuthSource('none');
+                            }
+                        }
+                        return;
                     }
                 }
 
@@ -37,7 +63,7 @@ export const AuthProvider = ({ children }) => {
                     const { data } = await supabase.auth.getSession();
                     const sessionUser = data?.session?.user;
                     if (sessionUser && isMounted) {
-                        setUser({
+                        persistUser({
                             _id: sessionUser.id,
                             name: sessionUser.user_metadata?.full_name || sessionUser.email?.split('@')[0] || 'Student',
                             email: sessionUser.email,
@@ -63,7 +89,7 @@ export const AuthProvider = ({ children }) => {
             const listener = supabase.auth.onAuthStateChange((_event, session) => {
                 const sessionUser = session?.user;
                 if (sessionUser) {
-                    setUser({
+                    persistUser({
                         _id: sessionUser.id,
                         name: sessionUser.user_metadata?.full_name || sessionUser.email?.split('@')[0] || 'Student',
                         email: sessionUser.email,
@@ -72,7 +98,7 @@ export const AuthProvider = ({ children }) => {
                     });
                     setAuthSource('supabase');
                 } else {
-                    setUser(null);
+                    persistUser(null);
                     setAuthSource('none');
                 }
             });
@@ -93,7 +119,7 @@ export const AuthProvider = ({ children }) => {
         });
         localStorage.setItem('token', res.data.token);
         axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
-        setUser(res.data);
+        persistUser(res.data);
         setAuthSource('backend');
         return res.data;
     };
@@ -118,7 +144,7 @@ export const AuthProvider = ({ children }) => {
         }
 
         if (data?.session?.user) {
-            setUser({
+            persistUser({
                 _id: data.session.user.id,
                 name: data.session.user.user_metadata?.full_name || email.split('@')[0],
                 email: data.session.user.email,
@@ -147,7 +173,7 @@ export const AuthProvider = ({ children }) => {
         }
 
         if (data?.user) {
-            setUser({
+            persistUser({
                 _id: data.user.id,
                 name: data.user.user_metadata?.full_name || email.split('@')[0],
                 email: data.user.email,
@@ -160,11 +186,12 @@ export const AuthProvider = ({ children }) => {
 
     const logout = () => {
         localStorage.removeItem('token');
+        localStorage.removeItem('authUser');
         delete axios.defaults.headers.common['Authorization'];
         if (authSource === 'supabase' && hasSupabaseConfig && supabase) {
             supabase.auth.signOut();
         }
-        setUser(null);
+        persistUser(null);
         setAuthSource('none');
     };
 
@@ -176,7 +203,7 @@ export const AuthProvider = ({ children }) => {
 
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         const res = await axios.put(`${API_URL}/api/auth/profile`, payload);
-        setUser((prev) => ({ ...prev, ...res.data }));
+        persistUser({ ...(user || {}), ...res.data });
         return res.data;
     };
 
@@ -193,8 +220,9 @@ export const AuthProvider = ({ children }) => {
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         await axios.delete(`${API_URL}/api/auth/account`, { data: payload });
         localStorage.removeItem('token');
+        localStorage.removeItem('authUser');
         delete axios.defaults.headers.common['Authorization'];
-        setUser(null);
+        persistUser(null);
         setAuthSource('none');
     };
 
