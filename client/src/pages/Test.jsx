@@ -6,7 +6,6 @@ import { pdfjs } from 'react-pdf';
 import { useAuth } from '../context/AuthContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-const PAYMENT_API_BASE = import.meta.env.VITE_PAYMENT_API_BASE || '';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
@@ -312,7 +311,7 @@ const Test = () => {
         try {
             const authConfig = getAuthConfig();
 
-            const { data: order } = await axios.post(`${PAYMENT_API_BASE}/api/create-order`, { testId: test._id }, authConfig);
+            const { data: order } = await axios.post(`${API_URL}/api/payments/create-order`, { testId: test._id }, authConfig);
             const keyId = order?.keyId;
 
             if (!order?.id) {
@@ -336,7 +335,7 @@ const Test = () => {
                 order_id: order.id,
                 handler: async (response) => {
                     try {
-                        await axios.post(`${PAYMENT_API_BASE}/api/verify-payment`, {
+                        await axios.post(`${API_URL}/api/payments/verify-payment`, {
                             razorpay_order_id: response.razorpay_order_id,
                             razorpay_payment_id: response.razorpay_payment_id,
                             razorpay_signature: response.razorpay_signature
@@ -379,7 +378,7 @@ const Test = () => {
 
         try {
             const authConfig = getAuthConfig();
-            const { data: order } = await axios.post(`${PAYMENT_API_BASE}/api/create-order`, {
+            const { data: order } = await axios.post(`${API_URL}/api/payments/create-order`, {
                 payment_type: 'standard_box',
                 standard: box.standard,
             }, authConfig);
@@ -402,7 +401,7 @@ const Test = () => {
                 order_id: order.id,
                 handler: async (response) => {
                     try {
-                        await axios.post(`${PAYMENT_API_BASE}/api/verify-payment`, {
+                        await axios.post(`${API_URL}/api/payments/verify-payment`, {
                             razorpay_order_id: response.razorpay_order_id,
                             razorpay_payment_id: response.razorpay_payment_id,
                             razorpay_signature: response.razorpay_signature,
