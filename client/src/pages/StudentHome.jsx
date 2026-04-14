@@ -10,6 +10,7 @@ const StudentHome = () => {
     const { user, updateStandard } = useAuth();
     const [announcements, setAnnouncements] = useState([]);
     const [standards, setStandards] = useState([]);
+    const [expandedAnnouncements, setExpandedAnnouncements] = useState({});
     
     // Static subjects data (could be moved to DB later)
     const subjects = [
@@ -76,6 +77,13 @@ const StudentHome = () => {
         }
     };
 
+    const toggleAnnouncement = (id) => {
+        setExpandedAnnouncements((prev) => ({
+            ...prev,
+            [id]: !prev[id],
+        }));
+    };
+
     return (
         <div className="min-h-screen bg-gray-50 pb-12">
             {/* Header */}
@@ -103,14 +111,30 @@ const StudentHome = () => {
                     
                     {announcements.length > 0 ? (
                         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                            {announcements.map((ann) => (
-                                <div key={ann._id || ann.id} className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden flex flex-col h-full">
+                            {announcements.map((ann) => {
+                                const annId = ann._id || ann.id;
+                                const isExpanded = Boolean(expandedAnnouncements[annId]);
+                                const description = ann.description || '';
+                                const showExpandButton = description.length > 140;
+
+                                return (
+                                <div key={annId} className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden flex flex-col h-full">
                                      <div className="absolute top-0 left-0 w-1 h-full bg-primary"></div>
                                      <h3 className="font-bold text-gray-900 mb-1 flex items-start justify-between gap-2">
                                         {ann.title}
                                         {ann.link && <ExternalLink size={16} className="text-gray-400 shrink-0 mt-1" />}
                                      </h3>
-                                     <p className="text-sm text-gray-600 line-clamp-3 mb-4 flex-grow">{ann.description}</p>
+                                     <p className={`text-sm text-gray-600 mb-3 flex-grow ${isExpanded ? '' : 'line-clamp-3'}`}>{description}</p>
+
+                                     {showExpandButton && (
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleAnnouncement(annId)}
+                                            className="self-start mb-3 text-xs font-semibold text-primary hover:underline"
+                                        >
+                                            {isExpanded ? 'Show less' : 'Read more'}
+                                        </button>
+                                     )}
                                      <div className="flex justify-between items-center mt-auto">
                                         <span className="text-xs text-gray-400">{new Date(ann.createdAt || ann.created_at).toLocaleDateString()}</span>
                                         {ann.link && (
@@ -125,7 +149,8 @@ const StudentHome = () => {
                                         )}
                                      </div>
                                 </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     ) : (
                          <div className="bg-white p-6 rounded-xl border border-dashed border-gray-300 text-center text-gray-500 text-sm">
