@@ -414,7 +414,10 @@ const createOrder = async (req, res) => {
             testId,
             amount: finalAmount,
         });
-        res.json(order);
+        res.json({
+            ...order,
+            keyId: process.env.RAZORPAY_KEY_ID,
+        });
     } catch (error) {
         logPayment('error', 'order_create_failed', {
             userId: req.user?.id,
@@ -551,7 +554,10 @@ const createStandardBoxOrder = async (req, res) => {
             standard: standardNumber,
             amount,
         });
-        return res.json(order);
+        return res.json({
+            ...order,
+            keyId: process.env.RAZORPAY_KEY_ID,
+        });
     } catch (error) {
         logPayment('error', 'standard_box_order_create_failed', {
             userId: req.user?.id,
