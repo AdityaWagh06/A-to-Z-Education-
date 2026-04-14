@@ -11,6 +11,11 @@ const isMissingColumnError = (error, columnName) => {
     return details.includes('column') && details.includes(String(columnName || '').toLowerCase());
 };
 
+const isMissingRelationError = (error, relationName) => {
+    const details = `${error?.message || ''} ${error?.details || ''} ${error?.hint || ''}`.toLowerCase();
+    return (details.includes('relation') || details.includes('table')) && details.includes(String(relationName || '').toLowerCase());
+};
+
 const getOptionalAuthUser = async (req, supabase) => {
     try {
         const header = req.headers.authorization;
@@ -310,7 +315,7 @@ const getPaidStandardBoxes = async (req, res) => {
         const authUser = await getOptionalAuthUser(req, supabase);
         const purchasedStandardSet = new Set(authUser?.purchased_standard_boxes || []);
 
-        const [{ data: boxes, error: boxesError }, { data: paidTests, error: paidTestsError }] = await Promise.all([
+        const [{ data: boxesData, error: boxesError }, { data: paidTests, error: paidTestsError }] = await Promise.all([
             supabase
                 .from('paid_standard_boxes')
                 .select('*')
@@ -321,7 +326,15 @@ const getPaidStandardBoxes = async (req, res) => {
                 .eq('is_locked', true),
         ]);
 
-        if (boxesError) throw boxesError;
+        let boxes = boxesData || [];
+        if (boxesError) {
+            if (isMissingRelationError(boxesError, 'paid_standard_boxes')) {
+                boxes = [];
+            } else {
+                throw boxesError;
+            }
+        }
+
         if (paidTestsError) throw paidTestsError;
 
         const testsByStandard = {};
