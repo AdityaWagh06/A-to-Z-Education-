@@ -450,36 +450,69 @@ const Test = () => {
     };
 
     const renderTestRow = (test) => (
-        <div key={test._id} className="grid grid-cols-1 lg:grid-cols-12 gap-3 lg:gap-4 px-4 py-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50/70">
-            <div className="lg:col-span-5">
-                <p className="font-semibold text-gray-900">{test.title}</p>
-                <p className="text-xs text-gray-500 mt-1 capitalize">{test.subject} | Standard {test.standard}</p>
-            </div>
-            <div className="lg:col-span-2">
-                <span className="inline-flex items-center rounded border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-700">
-                    {test.questions?.length > 0 ? `${test.questions.length} Qs` : 'PDF Test'}
-                </span>
-            </div>
-            <div className="lg:col-span-2">
-                <span className={`inline-flex items-center rounded px-2.5 py-1 text-xs font-medium ${test.isLocked ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
-                    {test.isLocked ? 'Paid' : 'Free'}
-                </span>
-            </div>
-            <div className="lg:col-span-3 flex flex-wrap gap-2">
-                <button
-                    onClick={() => test.pdfUrl ? handleViewPdf(test.pdfUrl, test.title) : handleOpenUnlockedTest(test)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-800 hover:bg-gray-100"
-                >
-                    <Eye size={15} /> Paper
-                </button>
-                {(test.answerSheetUrl || test.hasAnswerSheet) && (
+        <div key={test._id} className="px-4 py-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50/70">
+            <div className="lg:hidden space-y-3">
+                <div>
+                    <p className="font-semibold text-gray-900">{test.title}</p>
+                    <p className="text-xs text-gray-500 mt-1 capitalize">{test.subject} | Standard {test.standard}</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                    <span className="inline-flex items-center rounded border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-700">
+                        {test.questions?.length > 0 ? `${test.questions.length} Qs` : 'PDF Test'}
+                    </span>
+                    <span className={`inline-flex items-center rounded px-2.5 py-1 text-xs font-medium ${test.isLocked ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                        {test.isLocked ? 'Paid' : 'Free'}
+                    </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
                     <button
-                        onClick={() => test.answerSheetUrl ? handleViewPdf(test.answerSheetUrl, `${test.title} - Answer Key`) : handleOpenUnlockedAnswerSheet(test)}
+                        onClick={() => test.pdfUrl ? handleViewPdf(test.pdfUrl, test.title) : handleOpenUnlockedTest(test)}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-800 hover:bg-gray-100"
                     >
-                        <FileText size={15} /> Key
+                        <Eye size={15} /> Paper
                     </button>
-                )}
+                    {(test.answerSheetUrl || test.hasAnswerSheet) && (
+                        <button
+                            onClick={() => test.answerSheetUrl ? handleViewPdf(test.answerSheetUrl, `${test.title} - Answer Key`) : handleOpenUnlockedAnswerSheet(test)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-800 hover:bg-gray-100"
+                        >
+                            <FileText size={15} /> Key
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            <div className="hidden lg:grid lg:grid-cols-12 gap-4">
+                <div className="lg:col-span-5">
+                    <p className="font-semibold text-gray-900">{test.title}</p>
+                    <p className="text-xs text-gray-500 mt-1 capitalize">{test.subject} | Standard {test.standard}</p>
+                </div>
+                <div className="lg:col-span-2">
+                    <span className="inline-flex items-center rounded border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-700">
+                        {test.questions?.length > 0 ? `${test.questions.length} Qs` : 'PDF Test'}
+                    </span>
+                </div>
+                <div className="lg:col-span-2">
+                    <span className={`inline-flex items-center rounded px-2.5 py-1 text-xs font-medium ${test.isLocked ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                        {test.isLocked ? 'Paid' : 'Free'}
+                    </span>
+                </div>
+                <div className="lg:col-span-3 flex flex-wrap gap-2">
+                    <button
+                        onClick={() => test.pdfUrl ? handleViewPdf(test.pdfUrl, test.title) : handleOpenUnlockedTest(test)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-800 hover:bg-gray-100"
+                    >
+                        <Eye size={15} /> Paper
+                    </button>
+                    {(test.answerSheetUrl || test.hasAnswerSheet) && (
+                        <button
+                            onClick={() => test.answerSheetUrl ? handleViewPdf(test.answerSheetUrl, `${test.title} - Answer Key`) : handleOpenUnlockedAnswerSheet(test)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-800 hover:bg-gray-100"
+                        >
+                            <FileText size={15} /> Key
+                        </button>
+                    )}
+                </div>
             </div>
         </div>
     );
@@ -545,7 +578,7 @@ const Test = () => {
                     </div>
 
                     <div className="mb-6 border-b border-gray-200">
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 overflow-x-auto">
                             <button
                                 type="button"
                                 onClick={() => setSelectedCategory('free')}
@@ -568,7 +601,7 @@ const Test = () => {
                             <p className="text-gray-500 rounded-xl border border-dashed border-gray-300 bg-gray-50 p-6 text-center">No free tests in this standard yet.</p>
                         ) : (
                             <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
-                                <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 lg:gap-4 px-4 py-3 bg-gray-100 border-b border-gray-200 text-xs font-semibold uppercase tracking-wide text-gray-600">
+                                <div className="hidden lg:grid lg:grid-cols-12 gap-4 px-4 py-3 bg-gray-100 border-b border-gray-200 text-xs font-semibold uppercase tracking-wide text-gray-600">
                                     <div className="lg:col-span-5">Test</div>
                                     <div className="lg:col-span-2">Format</div>
                                     <div className="lg:col-span-2">Access</div>
@@ -601,7 +634,7 @@ const Test = () => {
                                 <p className="text-gray-500 rounded-xl border border-dashed border-gray-300 bg-gray-50 p-6 text-center">No paid tests in this standard yet.</p>
                             ) : (
                                 <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
-                                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 lg:gap-4 px-4 py-3 bg-gray-100 border-b border-gray-200 text-xs font-semibold uppercase tracking-wide text-gray-600">
+                                    <div className="hidden lg:grid lg:grid-cols-12 gap-4 px-4 py-3 bg-gray-100 border-b border-gray-200 text-xs font-semibold uppercase tracking-wide text-gray-600">
                                         <div className="lg:col-span-5">Test</div>
                                         <div className="lg:col-span-2">Format</div>
                                         <div className="lg:col-span-2">Access</div>

@@ -83,7 +83,7 @@ const Lessons = () => {
     return (
         <div className="flex flex-col md:flex-row min-h-[calc(100vh-64px)] md:h-[calc(100vh-64px)] md:overflow-hidden bg-gray-50">
             {/* Sidebar List */}
-            <div className="w-1/4 bg-white border-r border-gray-300 overflow-y-auto hidden md:block shadow-sm">
+            <div className="md:w-80 lg:w-1/4 bg-white border-r border-gray-300 overflow-y-auto hidden md:block shadow-sm">
                 <div className="p-4 font-bold text-lg border-b border-gray-300 capitalize sticky top-0 bg-white z-10 shadow-sm text-gray-800">{subject} Lessons</div>
                 <ul>
                     {videos.map(video => {
@@ -117,7 +117,7 @@ const Lessons = () => {
             </div>
 
             {/* Main Video Area */}
-            <div className="flex-1 p-4 sm:p-6 md:p-8 bg-gray-50 overflow-y-auto">
+            <div className="flex-1 p-3 sm:p-6 md:p-8 bg-gray-50 overflow-y-auto">
                 {selectedVideo ? (
                     <div className="max-w-4xl mx-auto"> {/* Adjusted for better fit */}
                         {/* Aspect Ratio Wrapper (16:9) */}
@@ -147,8 +147,8 @@ const Lessons = () => {
                                 }}
                             />
                         </div>
-                        <div className="mt-6 bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                            <h1 className="text-2xl font-bold text-gray-800">{selectedVideo.title}</h1>
+                        <div className="mt-4 sm:mt-6 bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-200">
+                            <h1 className="text-xl sm:text-2xl font-bold text-gray-800">{selectedVideo.title}</h1>
                             <p className="text-gray-600 mt-2 leading-relaxed">{selectedVideo.description || 'Watch and learn key concepts in this lesson.'}</p>
 
                             <div className="mt-6 md:hidden border border-gray-200 rounded-lg overflow-hidden">
@@ -175,7 +175,7 @@ const Lessons = () => {
                                     onClick={handlePrevLesson}
                                     disabled={isFirstVideo}
                                     className={`
-                                        flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold transition-all duration-200
+                                        flex items-center justify-center w-full sm:w-auto gap-2 px-5 py-2.5 rounded-lg font-bold transition-all duration-200
                                         ${isFirstVideo 
                                             ? 'opacity-50 cursor-not-allowed text-gray-400 bg-transparent' 
                                             : 'bg-white text-gray-700 hover:text-primary hover:bg-blue-50 border border-gray-300 hover:border-blue-200 shadow-sm hover:shadow-md'}
@@ -197,7 +197,7 @@ const Lessons = () => {
                                     onClick={handleNextLesson}
                                     disabled={isLastVideo}
                                     className={`
-                                        flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold transition-all duration-200 shadow-md
+                                        flex items-center justify-center w-full sm:w-auto gap-2 px-5 py-2.5 rounded-lg font-bold transition-all duration-200 shadow-md
                                         ${isLastVideo 
                                             ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200' 
                                             : 'bg-primary hover:bg-blue-700 text-white shadow-blue-200 hover:shadow-blue-300 hover:translate-x-1'}
