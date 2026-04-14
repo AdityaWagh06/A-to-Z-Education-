@@ -346,10 +346,16 @@ const finalizeVerification = async ({
 // @route   POST /api/payments/order
 // @access  Protected
 const createOrder = async (req, res) => {
-    const { testId } = req.body;
+    const paymentType = req.body?.payment_type;
+    if (paymentType === 'standard_box') {
+        return createStandardBoxOrder(req, res);
+    }
+
+    const rawTestId = req.body?.testId ?? req.body?.test_id ?? req.body?.id;
+    const testId = typeof rawTestId === 'string' ? rawTestId.trim() : '';
     const razorpay = getRazorpayClient();
 
-    if (!testId || typeof testId !== 'string') {
+    if (!testId) {
         return res.status(400).json({ message: 'Valid testId is required.' });
     }
 
