@@ -57,7 +57,6 @@ const allowedOrigins = [
     ...(process.env.CLIENT_ORIGINS || '').split(',').map((origin) => origin.trim()).filter(Boolean),
     'http://localhost:5173',
     'http://127.0.0.1:5173',
-    'https://a-to-z-education-d98u.vercel.app',
     'https://atozeducation.study'
 ].filter(Boolean);
 
