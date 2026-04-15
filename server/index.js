@@ -13,6 +13,7 @@ const paymentRoutes = require('./routes/paymentRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
 const standardRoutes = require('./routes/standardRoutes');
 const subjectRoutes = require('./routes/subjectRoutes');
+const healthRoutes = require('./routes/healthRoutes');
 
 dotenv.config();
 
@@ -97,6 +98,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/standards', standardRoutes);
 app.use('/api/subjects', subjectRoutes);
+app.use('/api/health', healthRoutes);
 
 app.get('/', (req, res) => {
     res.send('API is running...');
