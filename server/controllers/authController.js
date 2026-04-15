@@ -157,7 +157,7 @@ const googleLogin = async (req, res) => {
         if (findError) throw findError;
 
         if (!existing && authMode === 'login') {
-            return res.status(404).json({ message: 'User does not exist. Please sign up first.' });
+            return res.status(404).json({ message: 'No account found for this student. Please click Register first.' });
         }
 
         if (existing && authMode === 'register') {

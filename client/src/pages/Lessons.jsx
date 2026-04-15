@@ -18,9 +18,11 @@ const Lessons = () => {
     const standard = searchParams.get('standard');
     const [videos, setVideos] = useState([]);
     const [selectedVideo, setSelectedVideo] = useState(null);
+    const [isLoadingVideos, setIsLoadingVideos] = useState(true);
 
     useEffect(() => {
         const fetchVideos = () => {
+            setIsLoadingVideos(true);
             const standardQuery = standard ? `&standard=${standard}` : '';
             axios.get(`${API_URL}/api/videos?subject=${subject}${standardQuery}`)
                 .then(res => {
@@ -38,7 +40,14 @@ const Lessons = () => {
                         return stillExists || nextVideos[0];
                     });
                 })
-                .catch(err => console.error(err));
+                .catch(err => {
+                    console.error(err);
+                    setVideos([]);
+                    setSelectedVideo(null);
+                })
+                .finally(() => {
+                    setIsLoadingVideos(false);
+                });
         };
 
         const refreshIfVisible = () => {
@@ -79,6 +88,8 @@ const Lessons = () => {
 
     const isFirstVideo = selectedVideo && videos.length > 0 && videos[0]._id === selectedVideo._id;
     const isLastVideo = selectedVideo && videos.length > 0 && videos[videos.length - 1]._id === selectedVideo._id;
+    const activeVideo = selectedVideo || videos[0] || null;
+    const activeIndex = activeVideo ? videos.findIndex(v => v._id === activeVideo._id) : -1;
 
     return (
         <div className="flex flex-col md:flex-row min-h-[calc(100vh-64px)] md:h-[calc(100vh-64px)] md:overflow-hidden bg-gray-50">
@@ -118,7 +129,11 @@ const Lessons = () => {
 
             {/* Main Video Area */}
             <div className="flex-1 p-3 sm:p-6 md:p-8 bg-gray-50 overflow-y-auto">
-                {selectedVideo ? (
+                {isLoadingVideos ? (
+                    <div className="flex flex-col items-center justify-center min-h-[50vh] text-gray-500">
+                        <p className="text-lg font-medium">Loading lessons...</p>
+                    </div>
+                ) : activeVideo ? (
                     <div className="max-w-4xl mx-auto"> {/* Adjusted for better fit */}
                         {/* Aspect Ratio Wrapper (16:9) */}
                         <div className="relative w-full pt-[56.25%] rounded-xl overflow-hidden shadow-2xl bg-black border border-gray-800 ring-4 ring-gray-200/50 group">
@@ -126,7 +141,7 @@ const Lessons = () => {
                             <div className="absolute top-0 left-0 w-full h-16 z-20 bg-transparent cursor-default"></div>
 
                             <ReactPlayer 
-                                url={selectedVideo.youtubeUrl} 
+                                url={activeVideo.youtubeUrl} 
                                 className="absolute top-0 left-0"
                                 width="100%" 
                                 height="100%"
@@ -148,14 +163,14 @@ const Lessons = () => {
                             />
                         </div>
                         <div className="mt-4 sm:mt-6 bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-200">
-                            <h1 className="text-xl sm:text-2xl font-bold text-gray-800">{selectedVideo.title}</h1>
-                            <p className="text-gray-600 mt-2 leading-relaxed">{selectedVideo.description || 'Watch and learn key concepts in this lesson.'}</p>
+                            <h1 className="text-xl sm:text-2xl font-bold text-gray-800">{activeVideo.title}</h1>
+                            <p className="text-gray-600 mt-2 leading-relaxed">{activeVideo.description || 'Watch and learn key concepts in this lesson.'}</p>
 
                             <div className="mt-6 md:hidden border border-gray-200 rounded-lg overflow-hidden">
                                 <div className="px-3 py-2 bg-gray-50 text-sm font-semibold text-gray-700">All Lessons</div>
                                 <div className="max-h-64 overflow-y-auto">
                                     {videos.map((video) => {
-                                        const active = selectedVideo?._id === video._id;
+                                        const active = activeVideo?._id === video._id;
                                         return (
                                             <button
                                                 key={video._id}
@@ -188,8 +203,8 @@ const Lessons = () => {
                                 </button>
 
                                 <span className="text-sm font-medium text-gray-500 text-center sm:text-left">
-                                    {videos.length > 0 && selectedVideo && (
-                                        `Lesson ${videos.findIndex(v => v._id === selectedVideo._id) + 1} of ${videos.length}`
+                                    {videos.length > 0 && activeVideo && activeIndex >= 0 && (
+                                        `Lesson ${activeIndex + 1} of ${videos.length}`
                                     )}
                                 </span>
 
@@ -214,9 +229,10 @@ const Lessons = () => {
                         </div>
                     </div>
                 ) : (
-                         <div className="flex flex-col items-center justify-center min-h-[50vh] text-gray-500 opacity-60">
+                         <div className="flex flex-col items-center justify-center min-h-[50vh] text-gray-500 opacity-80 text-center px-4">
                         <div className="text-6xl mb-4 grayscale">📺</div>
-                        <p className="text-xl font-medium">Select a lesson from the sidebar to start learning.</p>
+                        <p className="text-xl font-medium">No lessons are available right now.</p>
+                        <p className="text-sm mt-2">Please choose another subject or standard and try again.</p>
                    </div>
                 )}
             </div>

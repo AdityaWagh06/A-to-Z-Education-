@@ -191,16 +191,16 @@ const Navbar = () => {
                                         <Info size={16} /> <span className="hidden sm:inline">About</span>
                                     </Link>
                                     <button 
-                                        onClick={openLogin}
-                                        className="px-3 sm:px-6 py-2 rounded-md font-bold text-primary border border-primary hover:bg-primary/5 transition text-sm sm:text-base whitespace-nowrap"
-                                    >
-                                        Login
-                                    </button>
-                                    <button 
                                         onClick={openRegister}
                                         className="px-3 sm:px-6 py-2 rounded-md font-bold bg-primary text-white hover:bg-opacity-90 transition shadow-md hover:shadow-lg text-sm sm:text-base whitespace-nowrap"
                                     >
                                         Register
+                                    </button>
+                                    <button 
+                                        onClick={openLogin}
+                                        className="px-3 sm:px-6 py-2 rounded-md font-bold text-primary border border-primary hover:bg-primary/5 transition text-sm sm:text-base whitespace-nowrap"
+                                    >
+                                        Login
                                     </button>
                                 </div>
                             )}

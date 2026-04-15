@@ -132,7 +132,7 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }) => {
         setSuccessMessage('');
         
         if (!googleCredential) {
-            setAuthError('Google session expired. Please click Sign up with Google again.');
+            setAuthError('Google session expired. Please click Register with Google again.');
             setStep('initial');
             return;
         }
@@ -334,7 +334,7 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }) => {
                                         Creating Account...
                                     </>
                                 ) : (
-                                    'Complete Sign Up'
+                                    'Complete Registration'
                                 )}
                             </button>
                         </form>
