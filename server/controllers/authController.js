@@ -160,8 +160,9 @@ const googleLogin = async (req, res) => {
             return res.status(404).json({ message: 'No account found for this student. Please click Register first.' });
         }
 
+        // If user exists and they're registering, just log them in (no need for extra details)
         if (existing && authMode === 'register') {
-            return res.status(409).json({ message: 'User already exists. Please log in.' });
+            authMode = 'login'; // Treat as login, skip profile details step
         }
 
         let user = existing;
