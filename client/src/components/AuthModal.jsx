@@ -188,6 +188,7 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }) => {
 
     const handleOverlayClick = (e) => {
         if (modalRef.current && !modalRef.current.contains(e.target)) {
+            clearRegistrationState({ setStep, setGoogleCredential, setName, setMobile, setStandard, setAuthError, setSuccessMessage });
             onClose();
         }
     };
@@ -229,7 +230,10 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }) => {
                         {step === 'details' ? 'Complete Your Profile' : (defaultTab === 'login' ? 'Welcome Back!' : 'Start Learning')}
                     </h2>
                     <button 
-                        onClick={() => { onClose(); setStep('initial'); }}
+                        onClick={() => {
+                            clearRegistrationState({ setStep, setGoogleCredential, setName, setMobile, setStandard, setAuthError, setSuccessMessage });
+                            onClose();
+                        }}
                         disabled={isLoading}
                         className={`p-2 rounded-full transition-colors text-gray-500 ${isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}`}
                         aria-label="Close"
