@@ -112,6 +112,23 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }) => {
             setIsLoading(true);
             
             if (defaultTab === 'register') {
+                setSuccessMessage('Checking your account...');
+                try {
+                    await login(response.credential, {}, 'login');
+                    setSuccessMessage('Account already exists. Logged in successfully! Redirecting...');
+                    setTimeout(() => {
+                        onClose();
+                        clearRegistrationState({ setStep, setGoogleCredential, setName, setMobile, setStandard, setAuthError, setSuccessMessage });
+                        navigate('/student/home', { replace: true });
+                    }, 500);
+                    return;
+                } catch (existingCheckError) {
+                    const status = Number(existingCheckError?.response?.status || 0);
+                    if (status !== 404) {
+                        throw existingCheckError;
+                    }
+                }
+
                 const payload = parseJwt(response.credential);
                 if (payload) {
                     setName(payload.name || '');
