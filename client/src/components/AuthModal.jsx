@@ -9,6 +9,16 @@ import { AuthProgress, RequestStatus } from './NetworkStatus';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
+const clearRegistrationState = ({ setStep, setGoogleCredential, setName, setMobile, setStandard, setAuthError, setSuccessMessage }) => {
+    setStep('initial');
+    setGoogleCredential(null);
+    setName('');
+    setMobile('');
+    setStandard(null);
+    setAuthError('');
+    setSuccessMessage('');
+};
+
 const parseJwt = (token) => {
     try {
         return JSON.parse(atob(token.split('.')[1]));
