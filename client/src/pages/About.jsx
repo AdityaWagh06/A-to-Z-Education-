@@ -130,6 +130,14 @@ const About = () => {
             </div>
           </article>
         </section>
+
+        <section className="mt-8">
+          <div className="rounded-xl border border-blue-100 bg-white/90 px-5 py-4 text-center shadow-sm">
+            <p className="text-sm sm:text-base font-semibold text-gray-700">
+              Built by Aditya Wagh, a Computer Science engineer
+            </p>
+          </div>
+        </section>
       </div>
     </div>
   );

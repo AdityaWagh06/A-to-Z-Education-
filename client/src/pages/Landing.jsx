@@ -70,6 +70,10 @@ const Landing = () => {
                         <span className="flex items-center gap-1"><CheckCircle size={16} className="text-green-500" /> Secure Google Sign-In</span>
                         <span className="flex items-center gap-1"><CheckCircle size={16} className="text-green-500" /> Instant Access</span>
                     </div>
+
+                    <p className="mt-6 text-sm sm:text-base font-semibold text-gray-700">
+                        Built by Aditya Wagh, a Computer Science engineer
+                    </p>
                 </div>
 
                 <div className="relative hidden md:block">
