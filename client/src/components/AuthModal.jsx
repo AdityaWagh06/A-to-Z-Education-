@@ -159,13 +159,7 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }) => {
             setTimeout(() => {
                 onClose();
                 navigate('/student/home', { replace: true });
-                // Reset state
-                setStep('initial');
-                setGoogleCredential(null);
-                setName('');
-                setMobile('');
-                setStandard(null);
-                setSuccessMessage('');
+                clearRegistrationState({ setStep, setGoogleCredential, setName, setMobile, setStandard, setAuthError, setSuccessMessage });
             }, 500);
         } catch (error) {
             console.error('Registration failed', error);
