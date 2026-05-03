@@ -50,20 +50,9 @@ const Lessons = () => {
                 });
         };
 
-        const refreshIfVisible = () => {
-            if (document.visibilityState === 'visible') {
-                fetchVideos();
-            }
-        };
-
         fetchVideos();
-        window.addEventListener('focus', refreshIfVisible);
-        document.addEventListener('visibilitychange', refreshIfVisible);
 
-        return () => {
-            window.removeEventListener('focus', refreshIfVisible);
-            document.removeEventListener('visibilitychange', refreshIfVisible);
-        };
+        return () => {};
     }, [subject, standard]);
 
     const handleNextLesson = () => {

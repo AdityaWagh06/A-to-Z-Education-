@@ -50,20 +50,9 @@ const StudentHome = () => {
             }
         };
 
-        const refreshIfVisible = () => {
-            if (document.visibilityState === 'visible') {
-                fetchData();
-            }
-        };
-
         fetchData();
-        window.addEventListener('focus', refreshIfVisible);
-        document.addEventListener('visibilitychange', refreshIfVisible);
 
-        return () => {
-            window.removeEventListener('focus', refreshIfVisible);
-            document.removeEventListener('visibilitychange', refreshIfVisible);
-        };
+        return () => {};
     }, []);
 
     const handleStandardSelect = async (stdValue) => {
