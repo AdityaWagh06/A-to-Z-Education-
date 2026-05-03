@@ -57,12 +57,10 @@ const Lessons = () => {
         };
 
         fetchVideos();
-        const intervalId = window.setInterval(fetchVideos, 15000);
         window.addEventListener('focus', refreshIfVisible);
         document.addEventListener('visibilitychange', refreshIfVisible);
 
         return () => {
-            window.clearInterval(intervalId);
             window.removeEventListener('focus', refreshIfVisible);
             document.removeEventListener('visibilitychange', refreshIfVisible);
         };
@@ -97,7 +95,7 @@ const Lessons = () => {
             <div className="md:w-80 lg:w-1/4 bg-white border-r border-gray-300 overflow-y-auto hidden md:block shadow-sm">
                 <div className="p-4 font-bold text-lg border-b border-gray-300 capitalize sticky top-0 bg-white z-10 shadow-sm text-gray-800">{subject} Lessons</div>
                 <ul>
-                    {videos.map(video => {
+                    {videos.map((video, index) => {
                         const videoId = getYouTubeID(video.youtubeUrl);
                         const thumbnailUrl = videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : null;
                         const isSelected = selectedVideo?._id === video._id;
@@ -109,13 +107,17 @@ const Lessons = () => {
                                 className={`p-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer flex gap-3 transition-colors ${isSelected ? 'bg-blue-50 border-l-4 border-l-primary' : 'border-l-4 border-l-transparent'}`}
                             >
                                 {thumbnailUrl && (
-                                    <div className={`flex-shrink-0 w-24 h-16 bg-gray-200 rounded overflow-hidden relative border ${isSelected ? 'border-primary' : 'border-gray-300'} shadow-sm`}>
+                                    <div className={`flex-shrink-0 w-24 h-16 bg-gray-200 rounded overflow-hidden relative border ${isSelected ? 'border-primary' : 'border-gray-300'} shadow-sm flex items-center justify-center`}>
                                         <img src={thumbnailUrl} alt={video.title} className="w-full h-full object-cover" />
                                         <div className="absolute inset-0 bg-black bg-opacity-10"></div>
+                                        <div className="absolute top-1 right-1 bg-gray-900 bg-opacity-70 text-white text-xs font-bold px-1.5 py-0.5 rounded">{index + 1}</div>
                                     </div>
                                 )}
                                 <div className="flex flex-col justify-center w-full">
-                                    <h4 className={`font-semibold text-sm line-clamp-2 leading-tight ${isSelected ? 'text-primary' : 'text-gray-700'}`}>{video.title}</h4>
+                                    <div className="flex items-start gap-2">
+                                        <span className="text-xs font-bold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded min-w-fit">{index + 1}</span>
+                                        <h4 className={`font-semibold text-sm line-clamp-2 leading-tight ${isSelected ? 'text-primary' : 'text-gray-700'}`}>{video.title}</h4>
+                                    </div>
                                     <div className="flex justify-between items-center mt-1">
                                          <span className="text-xs text-gray-400">{video.duration || '10 mins'}</span>
                                          {isSelected && <span className="text-xs font-bold text-primary">Playing</span>}
@@ -169,15 +171,16 @@ const Lessons = () => {
                             <div className="mt-6 md:hidden border border-gray-200 rounded-lg overflow-hidden">
                                 <div className="px-3 py-2 bg-gray-50 text-sm font-semibold text-gray-700">All Lessons</div>
                                 <div className="max-h-64 overflow-y-auto">
-                                    {videos.map((video) => {
+                                    {videos.map((video, index) => {
                                         const active = activeVideo?._id === video._id;
                                         return (
                                             <button
                                                 key={video._id}
                                                 type="button"
                                                 onClick={() => setSelectedVideo(video)}
-                                                className={`w-full text-left px-3 py-2.5 text-sm border-t first:border-t-0 transition ${active ? 'bg-blue-50 text-blue-700 font-semibold' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                                                className={`w-full text-left px-3 py-2.5 text-sm border-t first:border-t-0 transition flex items-center gap-2 ${active ? 'bg-blue-50 text-blue-700 font-semibold' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
                                             >
+                                                <span className="font-bold bg-gray-200 px-2 py-0.5 rounded text-xs min-w-fit">{index + 1}</span>
                                                 {video.title}
                                             </button>
                                         );
