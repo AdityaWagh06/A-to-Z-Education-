@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { BookOpen, Video, Award, Users, CheckCircle } from 'lucide-react';
+import { getGenericErrorMessage, logClientError } from '../lib/errorHandling';
 
 const Landing = () => {
     const { login } = useAuth();
@@ -15,8 +16,8 @@ const Landing = () => {
             await login(response.credential);
             navigate('/student/home', { replace: true });
         } catch (error) {
-            console.error('Google login failed', error);
-            setMessage(error?.response?.data?.message || 'Google login failed. Please try again.');
+            logClientError('Google login failed', error);
+            setMessage(getGenericErrorMessage());
         }
     };
 
@@ -57,7 +58,7 @@ const Landing = () => {
                         <div className="flex justify-center">
                             <GoogleLogin
                                 onSuccess={handleGoogleSuccess}
-                                onError={() => setMessage('Google login popup failed.')}
+                                onError={() => setMessage(getGenericErrorMessage())}
                                 shape="pill"
                                 theme="outline"
                                 size="large"

@@ -9,6 +9,8 @@ import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
 import About from './pages/About';
 import Navbar from './components/Navbar';
+import ErrorBoundary from './components/ErrorBoundary';
+import NotFound from './pages/NotFound';
 
 function App() {
   const { user } = useAuth();
@@ -23,20 +25,25 @@ function App() {
     <Router>
       <div className="min-h-screen bg-background font-sans text-gray-800">
         <Navbar />
-        <Routes>
-          <Route path="/" element={!user ? <Landing /> : <Navigate to={user.role === 'admin' ? "/admin/dashboard" : "/student/home"} replace />} />
-          <Route path="/about" element={<About />} />
-          
-          <Route path="/student/home" element={<ProtectedRoute><StudentHome /></ProtectedRoute>} />
-          <Route path="/student/subjects" element={<ProtectedRoute><Subjects /></ProtectedRoute>} />
-          <Route path="/student/tests" element={<ProtectedRoute><Test /></ProtectedRoute>} />
-          <Route path="/student/tests/:standard" element={<ProtectedRoute><Test /></ProtectedRoute>} />
-          <Route path="/student/lessons/:subject" element={<ProtectedRoute><Lessons /></ProtectedRoute>} />
-          <Route path="/student/test/:subject" element={<ProtectedRoute><Test /></ProtectedRoute>} />
-          <Route path="/student/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <main>
+          <ErrorBoundary fullScreen={false}>
+            <Routes>
+              <Route path="/" element={!user ? <Landing /> : <Navigate to={user.role === 'admin' ? "/admin/dashboard" : "/student/home"} replace />} />
+              <Route path="/about" element={<About />} />
 
-          <Route path="/admin/dashboard" element={<ProtectedRoute role="admin"><AdminDashboard /></ProtectedRoute>} />
-        </Routes>
+              <Route path="/student/home" element={<ProtectedRoute><StudentHome /></ProtectedRoute>} />
+              <Route path="/student/subjects" element={<ProtectedRoute><Subjects /></ProtectedRoute>} />
+              <Route path="/student/tests" element={<ProtectedRoute><Test /></ProtectedRoute>} />
+              <Route path="/student/tests/:standard" element={<ProtectedRoute><Test /></ProtectedRoute>} />
+              <Route path="/student/lessons/:subject" element={<ProtectedRoute><Lessons /></ProtectedRoute>} />
+              <Route path="/student/test/:subject" element={<ProtectedRoute><Test /></ProtectedRoute>} />
+              <Route path="/student/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+
+              <Route path="/admin/dashboard" element={<ProtectedRoute role="admin"><AdminDashboard /></ProtectedRoute>} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </ErrorBoundary>
+        </main>
       </div>
     </Router>
   );

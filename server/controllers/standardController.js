@@ -1,4 +1,5 @@
 const { getSupabaseAdmin } = require('../config/supabase');
+const { sendGenericError, sendGenericMessage } = require('../utils/errorResponse');
 
 // @desc    Get all standards
 // @route   GET /api/standards
@@ -15,8 +16,7 @@ const getStandards = async (req, res) => {
         // Return sorted data. If empty, client handles it or admin must add.
         res.json(data);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: error.message });
+        return sendGenericError(res, error, 500, 'Standards fetch error:');
     }
 };
 
@@ -27,7 +27,7 @@ const addStandard = async (req, res) => {
         const { label, value } = req.body;
         
         if (!label || !value) {
-            return res.status(400).json({ message: 'Label and value (number) are required' });
+            return sendGenericMessage(res, 400);
         }
 
         const supabase = getSupabaseAdmin();
@@ -39,8 +39,7 @@ const addStandard = async (req, res) => {
         if (error) throw error;
         res.status(201).json(data[0]);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: error.message });
+        return sendGenericError(res, error, 500, 'Standard create error:');
     }
 };
 
@@ -58,8 +57,7 @@ const deleteStandard = async (req, res) => {
         if (error) throw error;
         res.json({ message: 'Standard removed' });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: error.message });
+        return sendGenericError(res, error, 500, 'Standard delete error:');
     }
 };
 

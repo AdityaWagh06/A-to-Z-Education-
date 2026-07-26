@@ -10,13 +10,15 @@ const {
 } = require('../controllers/paymentController');
 const { protect } = require('../middleware/authMiddleware');
 
+const GENERIC_ERROR_MESSAGE = "Something went wrong. We'll be back shortly.";
+
 // Stricter limits for payment actions to reduce automated abuse.
 const createOrderLimiter = rateLimit({
 	windowMs: 10 * 60 * 1000,
 	max: 20,
 	standardHeaders: true,
 	legacyHeaders: false,
-	message: { message: 'Too many payment order requests. Please try again later.' }
+	message: { message: GENERIC_ERROR_MESSAGE }
 });
 
 const verifyPaymentLimiter = rateLimit({
@@ -24,7 +26,7 @@ const verifyPaymentLimiter = rateLimit({
 	max: 40,
 	standardHeaders: true,
 	legacyHeaders: false,
-	message: { message: 'Too many payment verification requests. Please try again later.' }
+	message: { message: GENERIC_ERROR_MESSAGE }
 });
 
 router.get('/config', getPaymentConfig);

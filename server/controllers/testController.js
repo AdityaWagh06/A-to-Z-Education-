@@ -2,6 +2,7 @@ const path = require('path');
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const { getSupabaseAdmin } = require('../config/supabase');
+const { sendGenericError, sendGenericMessage } = require('../utils/errorResponse');
 
 const buildFileUrl = (req, relativePath) => encodeURI(`${req.protocol}://${req.get('host')}${relativePath}`);
 const sanitizeUploadName = (fileName) => path.basename(String(fileName || 'file')).replace(/[^a-zA-Z0-9._-]/g, '_');
@@ -94,7 +95,7 @@ const getTests = async (req, res) => {
             };
         }));
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        return sendGenericError(res, error, 500, 'Tests fetch error:');
     }
 };
 
@@ -110,7 +111,7 @@ const getTestById = async (req, res) => {
             .eq('id', req.params.id)
             .single();
 
-        if (error || !test) return res.status(404).json({ message: 'Test not found' });
+        if (error || !test) return sendGenericMessage(res, 404);
 
         // Check if locked and unpaid
         if (test.is_locked) {
@@ -143,7 +144,7 @@ const getTestById = async (req, res) => {
             const purchasedByStandardBox = (user?.purchased_standard_boxes || []).includes(Number(test.standard));
             const purchased = purchasedByTest || purchasedByStandardBox;
             if (!purchased && req.user.role !== 'admin') {
-                return res.status(403).json({ message: 'Test is locked. Purchase required.' });
+                return sendGenericMessage(res, 403);
             }
         }
 
@@ -154,7 +155,7 @@ const getTestById = async (req, res) => {
         });
 
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        return sendGenericError(res, error, 500, 'Test fetch by id error:');
     }
 };
 
@@ -164,7 +165,7 @@ const getTestById = async (req, res) => {
 const createTest = async (req, res) => {
     try {
         if (!req.files || !req.files.pdf) {
-            return res.status(400).json({ message: 'No PDF file uploaded' });
+            return sendGenericMessage(res, 400);
         }
 
         const { title, subject, standard, price, isLocked } = req.body;
@@ -212,8 +213,7 @@ const createTest = async (req, res) => {
 
         res.status(201).json(data);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: error.message });
+        return sendGenericError(res, error, 500, 'Test create error:');
     }
 };
 
@@ -232,7 +232,7 @@ const submitTest = async (req, res) => {
             .eq('id', req.params.id)
             .single();
 
-        if (testError || !test) return res.status(404).json({ message: 'Test not found' });
+        if (testError || !test) return sendGenericMessage(res, 404);
 
         // 2. Get User Progress
         const { data: user, error: userError } = await supabase
@@ -269,8 +269,7 @@ const submitTest = async (req, res) => {
         res.json({ message: 'Test submitted successfully', progress });
 
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: error.message });
+        return sendGenericError(res, error, 500, 'Test submit error:');
     }
 };
 
@@ -281,7 +280,7 @@ const deleteTest = async (req, res) => {
         if (error) throw error;
         res.json({ message: 'Test deleted' });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        return sendGenericError(res, error, 500, 'Test delete error:');
     }
 };
 
@@ -305,7 +304,7 @@ const updateTest = async (req, res) => {
         if (error) throw error;
         res.json(data);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        return sendGenericError(res, error, 500, 'Test update error:');
     }
 };
 
@@ -357,7 +356,7 @@ const getPaidStandardBoxes = async (req, res) => {
             createdAt: b.created_at,
         })));
     } catch (error) {
-        return res.status(500).json({ message: error.message });
+        return sendGenericError(res, error, 500, 'Paid standard boxes fetch error:');
     }
 };
 
@@ -369,11 +368,11 @@ const upsertPaidStandardBox = async (req, res) => {
         const amountNumber = Number(amount);
 
         if (!Number.isInteger(standardNumber) || standardNumber < 2 || standardNumber > 10) {
-            return res.status(400).json({ message: 'Standard must be between 2 and 10.' });
+            return sendGenericMessage(res, 400);
         }
 
         if (!Number.isFinite(amountNumber) || amountNumber <= 0) {
-            return res.status(400).json({ message: 'Amount must be greater than 0.' });
+            return sendGenericMessage(res, 400);
         }
 
         const supabase = getSupabaseAdmin();
@@ -392,7 +391,7 @@ const upsertPaidStandardBox = async (req, res) => {
         if (error) throw error;
         return res.json(data);
     } catch (error) {
-        return res.status(500).json({ message: error.message });
+        return sendGenericError(res, error, 500, 'Paid standard box upsert error:');
     }
 };
 
@@ -404,7 +403,7 @@ const deletePaidStandardBox = async (req, res) => {
         if (error) throw error;
         return res.json({ message: 'Paid standard box deleted.' });
     } catch (error) {
-        return res.status(500).json({ message: error.message });
+        return sendGenericError(res, error, 500, 'Paid standard box delete error:');
     }
 };
 

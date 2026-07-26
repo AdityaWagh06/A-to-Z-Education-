@@ -4,6 +4,7 @@ import App from './App.jsx'
 import './index.css'
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from './context/AuthContext';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
@@ -22,8 +23,10 @@ const AppProviders = ({ children }) => {
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <AppProviders>
-      <App />
-    </AppProviders>
+    <ErrorBoundary fullScreen>
+      <AppProviders>
+        <App />
+      </AppProviders>
+    </ErrorBoundary>
   </React.StrictMode>,
 )

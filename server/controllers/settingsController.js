@@ -1,6 +1,7 @@
 const nodemailer = require('nodemailer');
 const { getSupabaseAdmin } = require('../config/supabase');
 const { getAdminEmails, writeStoredAdminEmails } = require('../utils/adminEmailStore');
+const { sendGenericError, sendGenericMessage } = require('../utils/errorResponse');
 
 const normalizeEmail = (email) => (typeof email === 'string' ? email.trim().toLowerCase() : '');
 
@@ -35,20 +36,20 @@ const getAdminEmailSettings = async (_req, res) => {
         const emails = await getAdminEmails();
         return res.json({ emails });
     } catch (error) {
-        return res.status(500).json({ message: error.message });
+        return sendGenericError(res, error, 500, 'Admin email settings fetch error:');
     }
 };
 
 const updateAdminEmailSettings = async (req, res) => {
     const { emails } = req.body;
     if (!Array.isArray(emails)) {
-        return res.status(400).json({ message: 'emails must be an array' });
+        return sendGenericMessage(res, 400);
     }
     try {
         const updated = await writeStoredAdminEmails(emails); // This writes to local JSON file
         return res.json({ emails: updated });
     } catch (error) {
-        return res.status(500).json({ message: error.message });
+        return sendGenericError(res, error, 500, 'Admin email settings update error:');
     }
 };
 
@@ -56,19 +57,17 @@ const sendBroadcastEmail = async (req, res) => {
     const { subject, message, ctaText, ctaLink } = req.body;
 
     if (!subject || !message) {
-        return res.status(400).json({ message: 'subject and message are required' });
+        return sendGenericMessage(res, 400);
     }
 
     const transporter = createTransporter();
     if (!transporter) {
-        return res.status(503).json({
-            message: 'Email service is not configured. Please set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS and SMTP_FROM.'
-        });
+        return sendGenericMessage(res, 503);
     }
 
     const from = process.env.SMTP_FROM || process.env.SMTP_USER;
     if (!from) {
-        return res.status(503).json({ message: 'SMTP_FROM is required to send broadcast emails.' });
+        return sendGenericMessage(res, 503);
     }
 
     try {
@@ -85,7 +84,7 @@ const sendBroadcastEmail = async (req, res) => {
             .filter(Boolean))];
 
         if (recipients.length === 0) {
-            return res.status(400).json({ message: 'No recipient emails found in users table.' });
+            return sendGenericMessage(res, 400);
         }
 
         const safeMessage = escapeHtml(message).replace(/\n/g, '<br/>');
@@ -115,7 +114,8 @@ const sendBroadcastEmail = async (req, res) => {
                 });
                 sent += 1;
             } catch (mailError) {
-                failed.push({ email: to, error: mailError.message });
+                console.error('Broadcast email send failed:', mailError);
+                failed.push({ email: to, error: 'Send failed' });
             }
         }
 
@@ -126,7 +126,7 @@ const sendBroadcastEmail = async (req, res) => {
             failed: failed.slice(0, 20)
         });
     } catch (error) {
-        return res.status(500).json({ message: error.message });
+        return sendGenericError(res, error, 500, 'Broadcast email error:');
     }
 };
 
@@ -174,7 +174,7 @@ const getStudentPurchases = async (req, res) => {
             }
 
             if (!user) {
-                return res.status(404).json({ message: 'Student not found for this email.' });
+                return sendGenericMessage(res, 404);
             }
 
             const directPurchasedTests = [...new Set(user.purchased_tests || [])];
@@ -218,7 +218,7 @@ const getStudentPurchases = async (req, res) => {
             }))
         });
     } catch (error) {
-        return res.status(500).json({ message: error.message });
+        return sendGenericError(res, error, 500, 'Student purchases fetch error:');
     }
 };
 
@@ -227,7 +227,7 @@ const updateStudentPurchases = async (req, res) => {
     const { purchasedTests } = req.body;
 
     if (!Array.isArray(purchasedTests)) {
-        return res.status(400).json({ message: 'purchasedTests must be an array' });
+        return sendGenericMessage(res, 400);
     }
 
     try {
@@ -251,7 +251,7 @@ const updateStudentPurchases = async (req, res) => {
             purchasedTests: data.purchased_tests || []
         });
     } catch (error) {
-        return res.status(500).json({ message: error.message });
+        return sendGenericError(res, error, 500, 'Student purchases update error:');
     }
 };
 
@@ -303,7 +303,7 @@ const getAdminOverviewStats = async (_req, res) => {
             revenue,
         });
     } catch (error) {
-        return res.status(500).json({ message: error.message });
+        return sendGenericError(res, error, 500, 'Overview stats fetch error:');
     }
 };
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { User, Video, FileText, Plus, BarChart, ShieldCheck, Trash2, Edit2, Book, Bell, Mail, Wallet } from 'lucide-react';
+import { getGenericErrorMessage, logClientError } from '../lib/errorHandling';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -40,7 +41,7 @@ const AdminDashboard = () => {
             const list = Array.isArray(data) && data.length > 0 ? data : defaultSubjects;
             setSubjects(list);
         } catch (err) {
-            console.error('Error loading subjects:', err);
+            logClientError('Error loading subjects:', err);
             setSubjects(defaultSubjects);
         }
     };
@@ -59,8 +60,8 @@ const AdminDashboard = () => {
                 revenue: Number(response.data?.revenue || 0),
             });
         } catch (err) {
-            console.error('Error loading overview stats:', err);
-            notify('error', 'Could not load overview stats.');
+            logClientError('Error loading overview stats:', err);
+            notify('error', getGenericErrorMessage());
         } finally {
             setOverviewLoading(false);
         }
@@ -170,7 +171,7 @@ const AdminDashboard = () => {
                 const response = await axios.get(`${API_URL}/api/videos?subject=${formData.subject}&standard=${formData.standard}`, getAuthConfig());
                 setVideos(response.data);
             } catch (err) {
-                console.error('Error fetching videos:', err);
+                logClientError('Error fetching videos:', err);
             }
         };
 
@@ -190,8 +191,8 @@ const AdminDashboard = () => {
                 setFormData({ ...formData, title: '', youtubeUrl: '' }); // Keep subject/standard
                 fetchVideos();
             } catch (err) {
-                console.error('Video save error:', err);
-                notify('error', 'Could not save video.');
+                logClientError('Video save error:', err);
+                notify('error', getGenericErrorMessage());
             } finally {
                 setLoading(false);
             }
@@ -214,8 +215,8 @@ const AdminDashboard = () => {
                 fetchVideos();
                 notify('success', 'Video deleted.');
             } catch (err) {
-                console.error('Delete error:', err);
-                notify('error', 'Could not delete video.');
+                logClientError('Delete error:', err);
+                notify('error', getGenericErrorMessage());
             }
         };
 
@@ -334,7 +335,7 @@ const AdminDashboard = () => {
                 setFormData({ label: '', value: '' });
                 fetchClasses();
                 notify('success', 'Class added.');
-            } catch (err) { console.error(err); notify('error', 'Could not add class.'); }
+            } catch (err) { logClientError('Could not add class:', err); notify('error', getGenericErrorMessage()); }
         };
 
         const handleDelete = async (id) => {
@@ -343,8 +344,8 @@ const AdminDashboard = () => {
                 fetchClasses();
                 notify('success', 'Class deleted.');
             } catch (err) {
-                console.error(err);
-                notify('error', 'Could not delete class.');
+                logClientError('Could not delete class:', err);
+                notify('error', getGenericErrorMessage());
             }
         };
 
@@ -500,9 +501,8 @@ const AdminDashboard = () => {
                 resetForm();
 
             } catch (err) {
-                console.error(err);
-                const message = err?.response?.data?.message || err?.message || 'Failed to save test';
-                notify('error', `Failed: ${message}`);
+                logClientError('Failed to save test:', err);
+                notify('error', getGenericErrorMessage());
             } finally {
                 setUploading(false);
             }
@@ -561,8 +561,8 @@ const AdminDashboard = () => {
                 setBoxForm({ standard: 2, title: '', description: '', amount: '' });
                 fetchPaidBoxes();
             } catch (err) {
-                console.error(err);
-                notify('error', err?.response?.data?.message || 'Could not save paid box.');
+                logClientError('Could not save paid box:', err);
+                notify('error', getGenericErrorMessage());
             } finally {
                 setBoxSaving(false);
             }
@@ -574,8 +574,8 @@ const AdminDashboard = () => {
                 notify('success', 'Paid box deleted.');
                 fetchPaidBoxes();
             } catch (err) {
-                console.error(err);
-                notify('error', err?.response?.data?.message || 'Could not delete paid box.');
+                logClientError('Could not delete paid box:', err);
+                notify('error', getGenericErrorMessage());
             }
         };
 
@@ -585,8 +585,8 @@ const AdminDashboard = () => {
                 fetchTests(); 
                 notify('success', 'Test deleted.');
             } catch (err) {
-                console.error('Delete error:', err);
-                notify('error', 'Could not delete test.');
+                logClientError('Delete error:', err);
+                notify('error', getGenericErrorMessage());
             }
         };
 
@@ -852,8 +852,8 @@ const AdminDashboard = () => {
                 setFormData({ key: '', label: '' });
                 notify('success', 'Subject added.');
             } catch (error) {
-                console.error(error);
-                notify('error', error?.response?.data?.message || 'Could not add subject.');
+                logClientError('Could not add subject:', error);
+                notify('error', getGenericErrorMessage());
             } finally {
                 setSaving(false);
             }
@@ -865,8 +865,8 @@ const AdminDashboard = () => {
                 setSubjects(Array.isArray(data) ? data : []);
                 notify('success', 'Subject deleted.');
             } catch (error) {
-                console.error(error);
-                notify('error', error?.response?.data?.message || 'Could not delete subject.');
+                logClientError('Could not delete subject:', error);
+                notify('error', getGenericErrorMessage());
             }
         };
 
@@ -952,8 +952,8 @@ const AdminDashboard = () => {
                 fetchNews();
                 notify('success', 'Announcement posted.');
             } catch (err) {
-                console.error(err);
-                notify('error', 'Could not post announcement.');
+                logClientError('Could not post announcement:', err);
+                notify('error', getGenericErrorMessage());
             } finally {
                 setLoading(false);
             }
@@ -965,8 +965,8 @@ const AdminDashboard = () => {
                 fetchNews();
                 notify('success', 'Announcement deleted.');
             } catch (err) {
-                console.error(err);
-                notify('error', 'Could not delete announcement.');
+                logClientError('Could not delete announcement:', err);
+                notify('error', getGenericErrorMessage());
             }
         };
 
@@ -1053,7 +1053,7 @@ const AdminDashboard = () => {
                     const { data } = await axios.get(`${API_URL}/api/settings/admin-emails`, getAuthConfig());
                     setEmails(data.emails || []);
                 } catch (error) {
-                    console.error(error);
+                    logClientError('Could not load admin emails:', error);
                 }
             };
             loadEmails();
@@ -1077,9 +1077,8 @@ const AdminDashboard = () => {
                 setEmails(data.emails || []);
                 notify('success', 'Admin access list saved.');
             } catch (error) {
-                console.error(error);
-                const message = error?.response?.data?.message || error?.message || 'Failed to save admin access list';
-                notify('error', `Could not save admin access list: ${message}`);
+                logClientError('Failed to save admin access list:', error);
+                notify('error', getGenericErrorMessage());
             } finally {
                 setSaving(false);
             }
@@ -1138,8 +1137,8 @@ const AdminDashboard = () => {
                 setResult({ type: 'success', data });
                 setFormData((prev) => ({ ...prev, subject: '', message: '' }));
             } catch (error) {
-                const message = error?.response?.data?.message || error?.message || 'Failed to send broadcast email';
-                setResult({ type: 'error', message });
+                logClientError('Failed to send broadcast email:', error);
+                setResult({ type: 'error', message: getGenericErrorMessage() });
             } finally {
                 setSending(false);
             }
@@ -1237,8 +1236,8 @@ const AdminDashboard = () => {
                     const { data } = await axios.get(`${API_URL}/api/settings/student-purchases`, getAuthConfig());
                     setTests((data.tests || []).filter((t) => Boolean(t.isLocked) || Number(t.price) > 0));
                 } catch (error) {
-                    console.error(error);
-                    setLocalStatus({ type: 'error', text: 'Could not load student purchase data.' });
+                        logClientError('Could not load student purchase data:', error);
+                        setLocalStatus({ type: 'error', text: getGenericErrorMessage() });
                 }
             };
 
@@ -1248,7 +1247,7 @@ const AdminDashboard = () => {
         const handleSearchStudent = async () => {
             const email = searchEmail.trim().toLowerCase();
             if (!email) {
-                setLocalStatus({ type: 'error', text: 'Please enter student email.' });
+                setLocalStatus({ type: 'error', text: getGenericErrorMessage() });
                 return;
             }
 
@@ -1261,10 +1260,10 @@ const AdminDashboard = () => {
                 );
                 setLocalStatus({ type: 'success', text: 'Student found.' });
             } catch (error) {
-                console.error(error);
+                logClientError('Student search failed:', error);
                 setSelectedUser(null);
                 setSelectedPurchases([]);
-                setLocalStatus({ type: 'error', text: error?.response?.data?.message || 'Student not found.' });
+                setLocalStatus({ type: 'error', text: getGenericErrorMessage() });
             } finally {
                 setSearching(false);
             }
@@ -1294,8 +1293,8 @@ const AdminDashboard = () => {
 
                 setLocalStatus({ type: 'success', text: 'Student purchases updated.' });
             } catch (error) {
-                console.error(error);
-                setLocalStatus({ type: 'error', text: error?.response?.data?.message || 'Could not save purchases.' });
+                logClientError('Could not save purchases:', error);
+                setLocalStatus({ type: 'error', text: getGenericErrorMessage() });
             } finally {
                 setSaving(false);
             }

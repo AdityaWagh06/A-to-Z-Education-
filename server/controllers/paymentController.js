@@ -1,6 +1,7 @@
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const { getSupabaseAdmin } = require('../config/supabase');
+const { GENERIC_ERROR_MESSAGE } = require('../utils/errorResponse');
 
 const PAYMENT_VERIFY_RETRY_ATTEMPTS = Math.max(1, Number(process.env.PAYMENT_VERIFY_RETRY_ATTEMPTS || 3));
 const PAYMENT_VERIFY_RETRY_DELAY_MS = Math.max(0, Number(process.env.PAYMENT_VERIFY_RETRY_DELAY_MS || 400));
@@ -27,11 +28,7 @@ const logPayment = (level, event, meta = {}) => {
     }
 };
 
-const sendSafeError = (res, err, fallbackMessage = 'Payment processing failed. Please try again.') => {
-    if (err instanceof PaymentError) {
-        return res.status(err.statusCode).json({ message: err.clientMessage });
-    }
-
+const sendSafeError = (res, err, fallbackMessage = GENERIC_ERROR_MESSAGE) => {
     logPayment('error', 'unexpected_error', {
         message: err?.message,
         details: err?.details,
@@ -39,7 +36,7 @@ const sendSafeError = (res, err, fallbackMessage = 'Payment processing failed. P
         stack: err?.stack,
     });
 
-    return res.status(500).json({ message: fallbackMessage });
+    return res.status(err?.statusCode || 500).json({ message: fallbackMessage });
 };
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -108,7 +105,7 @@ const getRazorpayClient = () => {
 
 const getPaymentConfig = (_req, res) => {
     if (!process.env.RAZORPAY_KEY_ID) {
-        return res.status(503).json({ message: 'Razorpay is not configured yet.' });
+        return res.status(503).json({ message: GENERIC_ERROR_MESSAGE });
     }
 
     return res.json({ keyId: process.env.RAZORPAY_KEY_ID });
@@ -116,7 +113,7 @@ const getPaymentConfig = (_req, res) => {
 
 const validateAndMatchSignature = ({ orderId, paymentId, signature }) => {
     if (!process.env.RAZORPAY_KEY_SECRET) {
-        throw new PaymentError(503, 'Payments are not configured yet. Please add Razorpay keys.');
+        throw new PaymentError(503, GENERIC_ERROR_MESSAGE);
     }
 
     const body = `${orderId}|${paymentId}`;
@@ -356,11 +353,11 @@ const createOrder = async (req, res) => {
     const razorpay = getRazorpayClient();
 
     if (!testId) {
-        return res.status(400).json({ message: 'Valid testId is required.' });
+        return res.status(400).json({ message: GENERIC_ERROR_MESSAGE });
     }
 
     if (!razorpay) {
-        return res.status(503).json({ message: 'Payments are not configured yet. Please add Razorpay keys.' });
+        return res.status(503).json({ message: GENERIC_ERROR_MESSAGE });
     }
 
     try {
@@ -372,12 +369,12 @@ const createOrder = async (req, res) => {
             .single();
 
         if (testError || !test) {
-            return res.status(404).json({ message: 'Test not found' });
+            return res.status(404).json({ message: GENERIC_ERROR_MESSAGE });
         }
 
         const finalAmount = Number(test.price || 0);
         if (finalAmount <= 0 || !test.is_locked) {
-            return res.status(400).json({ message: 'This test does not require payment.' });
+            return res.status(400).json({ message: GENERIC_ERROR_MESSAGE });
         }
 
         const { data: existingUser, error: existingUserError } = await supabase
@@ -389,7 +386,7 @@ const createOrder = async (req, res) => {
         if (existingUserError) throw existingUserError;
 
         if ((existingUser?.purchased_tests || []).includes(testId)) {
-            return res.status(409).json({ message: 'Test already purchased.' });
+            return res.status(409).json({ message: GENERIC_ERROR_MESSAGE });
         }
 
         const options = {
@@ -424,7 +421,7 @@ const createOrder = async (req, res) => {
             testId,
             reason: error?.message,
         });
-        return sendSafeError(res, error, 'Unable to create payment order. Please try again.');
+        return sendSafeError(res, error);
     }
 };
 
@@ -433,12 +430,12 @@ const createStandardBoxOrder = async (req, res) => {
     const razorpay = getRazorpayClient();
 
     if (!razorpay) {
-        return res.status(503).json({ message: 'Payments are not configured yet. Please add Razorpay keys.' });
+        return res.status(503).json({ message: GENERIC_ERROR_MESSAGE });
     }
 
     const standardNumber = Number(standard);
     if (!Number.isInteger(standardNumber) || standardNumber < 2 || standardNumber > 10) {
-        return res.status(400).json({ message: 'Standard must be between 2 and 10.' });
+        return res.status(400).json({ message: GENERIC_ERROR_MESSAGE });
     }
 
     try {
@@ -485,24 +482,24 @@ const createStandardBoxOrder = async (req, res) => {
 
         const paidTestsInStandard = (paidTests || []).filter((test) => Number(test.price || 0) > 0);
         if (paidTestsInStandard.length <= 0) {
-            return res.status(400).json({ message: 'No paid tests are available for this standard yet.' });
+            return res.status(400).json({ message: GENERIC_ERROR_MESSAGE });
         }
 
         const firstPaidTest = paidTestsInStandard[0];
 
         if (box && !box.is_active) {
-            return res.status(400).json({ message: 'This paid box is currently inactive.' });
+            return res.status(400).json({ message: GENERIC_ERROR_MESSAGE });
         }
 
         const purchasedBoxes = user?.purchased_standard_boxes || [];
         if (purchasedBoxes.includes(standardNumber)) {
-            return res.status(409).json({ message: 'This standard box is already unlocked.' });
+            return res.status(409).json({ message: GENERIC_ERROR_MESSAGE });
         }
 
         const derivedAmount = Math.max(...paidTestsInStandard.map((test) => Number(test.price || 0)));
         const amount = box ? Number(box.amount || 0) : Number(derivedAmount || 0);
         if (amount <= 0) {
-            return res.status(400).json({ message: 'Invalid box amount configured.' });
+            return res.status(400).json({ message: GENERIC_ERROR_MESSAGE });
         }
 
         const order = await razorpay.orders.create({
@@ -533,7 +530,7 @@ const createStandardBoxOrder = async (req, res) => {
         ) {
             const fallbackTestId = firstPaidTest?.id;
             if (!fallbackTestId) {
-                return res.status(500).json({ message: 'Payment setup fallback failed because no paid test could be linked.' });
+                return res.status(500).json({ message: GENERIC_ERROR_MESSAGE });
             }
 
             const fallbackInsert = await supabase.from('payments').insert([{
@@ -564,7 +561,7 @@ const createStandardBoxOrder = async (req, res) => {
             standard: standardNumber,
             reason: error?.message,
         });
-        return sendSafeError(res, error, 'Unable to create paid box order. Please try again.');
+        return sendSafeError(res, error);
     }
 };
 
@@ -576,11 +573,11 @@ const verifyPayment = async (req, res) => {
     const razorpay = getRazorpayClient();
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-        return res.status(400).json({ message: 'Missing payment verification fields.' });
+        return res.status(400).json({ message: GENERIC_ERROR_MESSAGE });
     }
 
     if (!razorpay || !process.env.RAZORPAY_KEY_SECRET) {
-        return res.status(503).json({ message: 'Payments are not configured yet. Please add Razorpay keys.' });
+        return res.status(503).json({ message: GENERIC_ERROR_MESSAGE });
     }
 
     try {
@@ -596,7 +593,7 @@ const verifyPayment = async (req, res) => {
                 orderId: razorpay_order_id,
                 paymentId: razorpay_payment_id,
             });
-            return res.status(400).json({ message: 'Invalid signature' });
+            return res.status(400).json({ message: GENERIC_ERROR_MESSAGE });
         }
 
         const supabase = getSupabaseAdmin();
@@ -623,7 +620,7 @@ const verifyPayment = async (req, res) => {
         });
 
         return res.json({
-            message: result.alreadyVerified ? 'Payment already verified' : 'Payment verified successfully',
+            message: GENERIC_ERROR_MESSAGE,
         });
     } catch (err) {
         logPayment('error', 'verification_failed', {
@@ -632,7 +629,7 @@ const verifyPayment = async (req, res) => {
             paymentId: razorpay_payment_id,
             reason: err?.message,
         });
-        return sendSafeError(res, err, 'Payment verification could not be completed. Please retry.');
+        return sendSafeError(res, err);
     }
 };
 
@@ -642,13 +639,13 @@ const verifyPayment = async (req, res) => {
 const verifyPaymentWebhook = async (req, res) => {
     const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
     if (!webhookSecret) {
-        return res.status(503).json({ message: 'Webhook is not configured.' });
+        return res.status(503).json({ message: GENERIC_ERROR_MESSAGE });
     }
 
     try {
         const signature = req.headers['x-razorpay-signature'];
         if (!signature) {
-            return res.status(400).json({ message: 'Missing webhook signature.' });
+            return res.status(400).json({ message: GENERIC_ERROR_MESSAGE });
         }
 
         const rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.from(JSON.stringify(req.body || {}));
@@ -663,7 +660,7 @@ const verifyPaymentWebhook = async (req, res) => {
 
         if (!signatureValid) {
             logPayment('error', 'webhook_signature_invalid', { signaturePresent: true });
-            return res.status(400).json({ message: 'Invalid webhook signature.' });
+            return res.status(400).json({ message: GENERIC_ERROR_MESSAGE });
         }
 
         const body = Buffer.isBuffer(req.body) ? JSON.parse(req.body.toString('utf8')) : req.body;
@@ -671,7 +668,7 @@ const verifyPaymentWebhook = async (req, res) => {
         const payload = body?.payload;
 
         if (eventType !== 'payment.captured') {
-            return res.status(200).json({ message: 'Webhook ignored', event: eventType });
+            return res.status(200).json({ message: GENERIC_ERROR_MESSAGE });
         }
 
         const paymentEntity = payload?.payment?.entity;
@@ -679,7 +676,7 @@ const verifyPaymentWebhook = async (req, res) => {
         const paymentId = paymentEntity?.id;
 
         if (!orderId || !paymentId) {
-            return res.status(400).json({ message: 'Invalid webhook payload.' });
+            return res.status(400).json({ message: GENERIC_ERROR_MESSAGE });
         }
 
         const supabase = getSupabaseAdmin();
@@ -704,12 +701,12 @@ const verifyPaymentWebhook = async (req, res) => {
             amount: result.payment?.amount,
         });
 
-        return res.status(200).json({ message: 'Webhook processed successfully.' });
+        return res.status(200).json({ message: GENERIC_ERROR_MESSAGE });
     } catch (err) {
         logPayment('error', 'webhook_processing_failed', {
             reason: err?.message,
         });
-        return sendSafeError(res, err, 'Webhook processing failed.');
+        return sendSafeError(res, err);
     }
 };
 

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { supabase } = require('../config/supabase');
+const { sendGenericError, sendGenericMessage } = require('../utils/errorResponse');
 
 /**
  * Health Check Endpoint
@@ -39,11 +40,7 @@ router.get('/', async (req, res) => {
 
     res.json(health);
   } catch (error) {
-    res.status(500).json({
-      status: 'error',
-      timestamp: new Date().toISOString(),
-      message: error.message,
-    });
+    return sendGenericError(res, error, 500, 'Health check error:');
   }
 });
 
@@ -55,7 +52,7 @@ router.get('/', async (req, res) => {
  */
 router.get('/schema', async (req, res) => {
   if (req.headers['x-api-key'] !== process.env.ADMIN_API_KEY && !req.user?.role === 'admin') {
-    return res.status(401).json({ error: 'Unauthorized' });
+    return sendGenericMessage(res, 401);
   }
 
   try {
@@ -123,9 +120,8 @@ router.get('/schema', async (req, res) => {
       } catch (error) {
         results[tableName] = {
           status: 'error',
-          error: error.message,
         };
-        issues.push(`Error checking ${tableName}: ${error.message}`);
+        issues.push(`Error checking ${tableName}`);
       }
     }
 
@@ -137,10 +133,7 @@ router.get('/schema', async (req, res) => {
       issueCount: issues.length,
     });
   } catch (error) {
-    res.status(500).json({
-      error: 'Schema check failed',
-      message: error.message,
-    });
+    return sendGenericError(res, error, 500, 'Schema check error:');
   }
 });
 
@@ -152,7 +145,7 @@ router.get('/schema', async (req, res) => {
  */
 router.get('/env', async (req, res) => {
   if (req.headers['x-api-key'] !== process.env.ADMIN_API_KEY && !req.user?.role === 'admin') {
-    return res.status(401).json({ error: 'Unauthorized' });
+    return sendGenericMessage(res, 401);
   }
 
   const requiredEnvVars = [

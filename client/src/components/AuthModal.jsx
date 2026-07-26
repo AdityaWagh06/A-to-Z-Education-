@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Spinner, LoadingOverlay } from './Spinner';
 import { AuthProgress, RequestStatus } from './NetworkStatus';
+import { getGenericErrorMessage, logClientError } from '../lib/errorHandling';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -83,7 +84,7 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }) => {
                 const sorted = (Array.isArray(data) ? data : []).sort((a, b) => Number(a.value) - Number(b.value));
                 setStandards(sorted);
             } catch (error) {
-                console.warn('Failed to fetch standards:', error.message);
+                logClientError('Failed to fetch standards:', error);
                 // Fallback to default standards
                 setStandards([
                     { id: 's2', value: 2, label: 'Standard 2' },
@@ -146,8 +147,8 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }) => {
                 }, 500);
             }
         } catch (error) {
-            console.error('Login failed', error);
-            setAuthError(error?.response?.data?.message || 'Login failed. Please try again.');
+            logClientError('Login failed', error);
+            setAuthError(getGenericErrorMessage());
         } finally {
             setIsLoading(false);
         }
@@ -159,7 +160,7 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }) => {
         setSuccessMessage('');
         
         if (!googleCredential) {
-            setAuthError('Google session expired. Please click Register with Google again.');
+            setAuthError(getGenericErrorMessage());
             setStep('initial');
             return;
         }
@@ -179,8 +180,8 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }) => {
                 clearRegistrationState({ setStep, setGoogleCredential, setName, setMobile, setStandard, setAuthError, setSuccessMessage });
             }, 500);
         } catch (error) {
-            console.error('Registration failed', error);
-            setAuthError(error?.response?.data?.message || 'Registration failed. Please try again.');
+            logClientError('Registration failed', error);
+            setAuthError(getGenericErrorMessage());
         } finally {
             setIsLoading(false);
         }
@@ -275,7 +276,7 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }) => {
                                     <div className="transform scale-110">
                                         <GoogleLogin
                                             onSuccess={handleGoogleSuccess}
-                                            onError={() => setAuthError('Google Login Failed')}
+                                            onError={() => setAuthError(getGenericErrorMessage())}
                                             width="300"
                                             theme="filled_blue"
                                             shape="pill"

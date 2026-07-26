@@ -1,4 +1,5 @@
 const { getSupabaseAdmin } = require('../config/supabase');
+const { sendGenericError } = require('../utils/errorResponse');
 
 // @desc    Get all videos
 // @access  Public
@@ -26,7 +27,7 @@ const getVideos = async (req, res) => {
             createdAt: v.created_at
         })));
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        return sendGenericError(res, error, 500, 'Videos fetch error:');
     }
 };
 
@@ -62,7 +63,7 @@ const addVideo = async (req, res) => {
             createdAt: data.created_at
         });
     } catch (error) {
-        res.status(400).json({ message: error.message });
+        return sendGenericError(res, error, 400, 'Video create error:');
     }
 };
 
@@ -75,7 +76,7 @@ const deleteVideo = async (req, res) => {
         if (error) throw error;
         res.json({ message: 'Video removed' });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        return sendGenericError(res, error, 500, 'Video delete error:');
     }
 };
 
@@ -102,7 +103,7 @@ const updateVideo = async (req, res) => {
         if (error) throw error;
         res.json(data);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        return sendGenericError(res, error, 500, 'Video update error:');
     }
 };
 

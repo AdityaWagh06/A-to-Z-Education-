@@ -14,6 +14,7 @@ const settingsRoutes = require('./routes/settingsRoutes');
 const standardRoutes = require('./routes/standardRoutes');
 const subjectRoutes = require('./routes/subjectRoutes');
 const healthRoutes = require('./routes/healthRoutes');
+const { GENERIC_ERROR_MESSAGE } = require('./utils/errorResponse');
 
 dotenv.config();
 
@@ -48,7 +49,7 @@ const apiLimiter = rateLimit({
     max: 300,
     standardHeaders: true,
     legacyHeaders: false,
-    message: { message: 'Too many requests. Please try again later.' }
+    message: { message: GENERIC_ERROR_MESSAGE }
 });
 
 app.use('/api', apiLimiter);
@@ -102,6 +103,23 @@ app.use('/api/health', healthRoutes);
 
 app.get('/', (req, res) => {
     res.send('API is running...');
+});
+
+app.use('/api', (req, res) => {
+    return res.status(404).json({
+        message: GENERIC_ERROR_MESSAGE,
+    });
+});
+
+app.use((err, req, res, next) => {
+    console.error('Unhandled server error:', err);
+    if (res.headersSent) {
+        return next(err);
+    }
+
+    return res.status(err?.statusCode || 500).json({
+        message: GENERIC_ERROR_MESSAGE,
+    });
 });
 
 const PORT = process.env.PORT || 5000;

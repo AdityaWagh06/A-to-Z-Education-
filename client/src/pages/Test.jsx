@@ -4,6 +4,7 @@ import axios from 'axios';
 import { FileText, X, Eye, ChevronRight, ShieldCheck } from 'lucide-react';
 import { pdfjs } from 'react-pdf';
 import { useAuth } from '../context/AuthContext';
+import { getGenericErrorMessage, logClientError } from '../lib/errorHandling';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -216,8 +217,8 @@ const Test = () => {
             setTotalPages(loadedDoc.numPages || 0);
             setCurrentPage(1);
         } catch (error) {
-            const message = error?.response?.data?.message || error?.message || 'Could not load PDF file.';
-            setPdfError(message);
+            logClientError('Could not load PDF file', error);
+            setPdfError(getGenericErrorMessage());
         } finally {
             setPdfLoading(false);
         }
@@ -244,7 +245,8 @@ const Test = () => {
                 if (cancelled) return;
             } catch (error) {
                 if (!cancelled) {
-                    setPdfError(error?.message || 'Could not render PDF page.');
+                    logClientError('Could not render PDF page', error);
+                    setPdfError(getGenericErrorMessage());
                 }
             }
         };
@@ -281,7 +283,7 @@ const Test = () => {
             await handleViewPdf(data.pdfUrl, test.title);
         } catch (error) {
             console.error(error);
-            notify('error', error?.response?.data?.message || 'Could not open test paper.');
+            notify('error', getGenericErrorMessage());
         }
     };
 
@@ -295,14 +297,14 @@ const Test = () => {
             await handleViewPdf(data.answerSheetUrl, `${test.title} - Answer Key`);
         } catch (error) {
             console.error(error);
-            notify('error', error?.response?.data?.message || 'Could not open answer key.');
+            notify('error', getGenericErrorMessage());
         }
     };
 
     const handleUnlock = async (test) => {
         const hasSdk = await loadRazorpayScript();
         if (!hasSdk) {
-            notify('error', 'Failed to load Razorpay checkout. Please try again.');
+            notify('error', getGenericErrorMessage());
             return;
         }
 
@@ -346,7 +348,7 @@ const Test = () => {
                         await handleOpenUnlockedTest(test);
                     } catch (verifyError) {
                         console.error(verifyError);
-                        notify('error', verifyError?.response?.data?.message || 'Payment verification failed.');
+                        notify('error', getGenericErrorMessage());
                     } finally {
                         setUnlockingTestId(null);
                     }
@@ -362,7 +364,7 @@ const Test = () => {
             razorpay.open();
         } catch (error) {
             console.error(error);
-            notify('error', error?.response?.data?.message || error?.message || 'Could not start payment.');
+            notify('error', getGenericErrorMessage());
             setUnlockingTestId(null);
         }
     };
@@ -370,7 +372,7 @@ const Test = () => {
     const handleUnlockStandardBox = async (box) => {
         const hasSdk = await loadRazorpayScript();
         if (!hasSdk) {
-            notify('error', 'Failed to load Razorpay checkout. Please try again.');
+            notify('error', getGenericErrorMessage());
             return;
         }
 
@@ -413,7 +415,7 @@ const Test = () => {
                         await Promise.all([fetchTests(), fetchPaidStandardBoxes()]);
                     } catch (verifyError) {
                         console.error(verifyError);
-                        notify('error', verifyError?.response?.data?.message || 'Payment verification failed.');
+                        notify('error', getGenericErrorMessage());
                     } finally {
                         setUnlockingTestId(null);
                     }
@@ -428,7 +430,7 @@ const Test = () => {
             razorpay.open();
         } catch (error) {
             console.error(error);
-            notify('error', error?.response?.data?.message || error?.message || 'Could not start payment.');
+            notify('error', getGenericErrorMessage());
             setUnlockingTestId(null);
         }
     };
@@ -728,8 +730,8 @@ const Test = () => {
                                 <p className="text-gray-700">Loading PDF...</p>
                             ) : pdfError ? (
                                 <div className="text-center text-red-600">
-                                    <p className="font-semibold">Could not load PDF.</p>
-                                    <p className="text-sm mt-1">{pdfError}</p>
+                            <p className="font-semibold">{getGenericErrorMessage()}</p>
+                                    <p className="text-sm mt-1">{pdfError || getGenericErrorMessage()}</p>
                                 </div>
                             ) : pdfData && pdfDocument ? (
                                 <canvas ref={canvasRef} className="shadow-lg bg-white rounded" />

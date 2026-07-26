@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { getSupabaseAdmin } = require('../config/supabase');
+const { sendGenericMessage } = require('../utils/errorResponse');
 
 const protect = async (req, res, next) => {
     let token;
@@ -17,19 +18,19 @@ const protect = async (req, res, next) => {
                 .single();
 
             if (error || !data) {
-                return res.status(401).json({ message: 'Not authorized, user not found' });
+                return sendGenericMessage(res, 401);
             }
 
             req.user = data;
             return next();
         } catch (error) {
             console.error(error);
-            return res.status(401).json({ message: 'Not authorized, token failed' });
+            return sendGenericMessage(res, 401);
         }
     }
 
     if (!token) {
-        return res.status(401).json({ message: 'Not authorized, no token' });
+        return sendGenericMessage(res, 401);
     }
 };
 
@@ -37,7 +38,7 @@ const admin = (req, res, next) => {
     if (req.user && req.user.role === 'admin') {
         next();
     } else {
-        res.status(401).json({ message: 'Not authorized as an admin' });
+        return sendGenericMessage(res, 401);
     }
 };
 

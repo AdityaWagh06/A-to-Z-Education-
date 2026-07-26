@@ -3,6 +3,7 @@ const { OAuth2Client } = require('google-auth-library');
 const nodemailer = require('nodemailer');
 const { getSupabaseAdmin } = require('../config/supabase');
 const { getAdminEmails } = require('../utils/adminEmailStore');
+const { sendGenericError, sendGenericMessage } = require('../utils/errorResponse');
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -157,7 +158,7 @@ const googleLogin = async (req, res) => {
         if (findError) throw findError;
 
         if (!existing && authMode === 'login') {
-            return res.status(404).json({ message: 'No account found for this student. Please click Register first.' });
+            return sendGenericMessage(res, 404);
         }
 
         let user = existing;
@@ -230,7 +231,7 @@ const googleLogin = async (req, res) => {
             try {
                 await sendWelcomeEmail({ name: user?.name, email: user?.email });
             } catch (mailError) {
-                console.error('Welcome email error:', mailError?.message || mailError);
+                console.error('Welcome email error:', mailError);
             }
         }
 
@@ -249,8 +250,7 @@ const googleLogin = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Auth Error Details:', error);
-        res.status(401).json({ message: `Google Auth Failed: ${error.message || JSON.stringify(error)}` });
+        return sendGenericError(res, error, 401, 'Auth Error Details:');
     }
 };
 
@@ -272,7 +272,7 @@ const getUserProfile = async (req, res) => {
             mobile_no: req.user.mobile_no
         });
     } else {
-        res.status(404).json({ message: 'User not found' });
+        return sendGenericMessage(res, 404);
     }
 };
 
@@ -296,7 +296,7 @@ const updateUserProfile = async (req, res) => {
         .single();
 
     if (error || !updated) {
-        return res.status(404).json({ message: 'User update failed' });
+        return sendGenericMessage(res, 404);
     }
 
     res.json({
@@ -317,11 +317,11 @@ const deleteUserAccount = async (req, res) => {
     const { confirmText, emailConfirm } = req.body || {};
 
     if (String(confirmText || '').trim().toUpperCase() !== 'DELETE') {
-        return res.status(400).json({ message: 'Type DELETE to confirm account deletion.' });
+        return sendGenericMessage(res, 400);
     }
 
     if (!emailConfirm || String(emailConfirm).trim().toLowerCase() !== String(req.user.email || '').trim().toLowerCase()) {
-        return res.status(400).json({ message: 'Email verification failed.' });
+        return sendGenericMessage(res, 400);
     }
 
     try {
@@ -334,7 +334,7 @@ const deleteUserAccount = async (req, res) => {
         if (error) throw error;
         return res.json({ message: 'Account deleted successfully.' });
     } catch (error) {
-        return res.status(500).json({ message: error.message || 'Could not delete account.' });
+        return sendGenericError(res, error, 500, 'Delete account error:');
     }
 };
 

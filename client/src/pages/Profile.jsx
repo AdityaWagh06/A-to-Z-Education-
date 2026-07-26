@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { BarChart3, BookOpen, Trophy, Target } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AnimatedAnimalAvatar from '../components/AnimatedAnimalAvatar';
+import { getGenericErrorMessage, logClientError } from '../lib/errorHandling';
 
 const SUBJECTS = [
     { key: 'maths', label: 'Maths' },
@@ -75,7 +76,8 @@ const Profile = () => {
             setDeleteModalOpen(false);
             navigate('/', { replace: true });
         } catch (error) {
-            setDeleteError(error?.response?.data?.message || 'Could not delete account.');
+            logClientError('Delete account failed', error);
+            setDeleteError(getGenericErrorMessage());
         } finally {
             setDeleteLoading(false);
         }

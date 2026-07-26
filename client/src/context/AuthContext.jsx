@@ -123,7 +123,7 @@ export const AuthProvider = ({ children }) => {
             }
           } else {
             // For other errors, keep cached user and try Supabase
-            console.warn('Backend profile fetch failed (will try Supabase):', error.message);
+            console.error('Backend profile fetch failed (will try Supabase):', error);
           }
         }
       }
@@ -154,7 +154,7 @@ export const AuthProvider = ({ children }) => {
             }
           }
         } catch (error) {
-          console.warn('Supabase session fetch failed:', error.message);
+          console.error('Supabase session fetch failed:', error);
         }
       }
     } catch (error) {

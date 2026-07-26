@@ -1,4 +1,5 @@
 const { getSupabaseAdmin } = require('../config/supabase');
+const { sendGenericError } = require('../utils/errorResponse');
 
 // @desc    Get announcements
 // @access  Public
@@ -22,7 +23,7 @@ const getAnnouncements = async (req, res) => {
             createdAt: a.created_at
         })));
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        return sendGenericError(res, error, 500, 'Announcements fetch error:');
     }
 };
 
@@ -54,7 +55,7 @@ const createAnnouncement = async (req, res) => {
             createdAt: data.created_at
         });
     } catch (error) {
-        res.status(400).json({ message: error.message });
+        return sendGenericError(res, error, 400, 'Announcement create error:');
     }
 };
 
@@ -67,7 +68,7 @@ const deleteAnnouncement = async (req, res) => {
         if (error) throw error;
         res.json({ message: 'Announcement removed' });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        return sendGenericError(res, error, 500, 'Announcement delete error:');
     }
 };
 
