@@ -734,7 +734,12 @@ const AdminDashboard = () => {
                                     </div>
                                     <div className="flex items-center gap-3 self-end sm:self-auto">
                                         {test.pdfUrl && (
-                                            <a href={test.pdfUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-blue-600 hover:underline">
+                                            <a
+                                                href={`${test.pdfUrl}${localStorage.getItem('token') ? `?token=${encodeURIComponent(localStorage.getItem('token'))}` : ''}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-xs font-bold text-blue-600 hover:underline"
+                                            >
                                                 View PDF
                                             </a>
                                         )}

@@ -25,7 +25,7 @@ function App() {
     <Router>
       <div className="min-h-screen bg-background font-sans text-gray-800">
         <Navbar />
-        <main>
+        <main className="flex-1">
           <ErrorBoundary fullScreen={false}>
             <Routes>
               <Route path="/" element={!user ? <Landing /> : <Navigate to={user.role === 'admin' ? "/admin/dashboard" : "/student/home"} replace />} />
@@ -44,6 +44,14 @@ function App() {
             </Routes>
           </ErrorBoundary>
         </main>
+        {user && (
+          <footer className="bg-white border-t border-gray-200 py-4 mt-auto text-center text-xs text-gray-500">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2">
+              <p>© {new Date().getFullYear()} A to Z Education. All rights reserved.</p>
+              <p className="font-medium text-gray-600">Built by Aditya Wagh, a Computer Science engineer</p>
+            </div>
+          </footer>
+        )}
       </div>
     </Router>
   );
