@@ -10,6 +10,9 @@ const normalizeEmails = (emails) => {
 };
 
 const readStoredAdminEmails = async () => {
+    if (process.env.NODE_ENV === 'production') {
+        return [];
+    }
     try {
         const raw = await fs.readFile(dataFilePath, 'utf8');
         const parsed = JSON.parse(raw);
@@ -21,12 +24,19 @@ const readStoredAdminEmails = async () => {
 
 const writeStoredAdminEmails = async (emails) => {
     const normalized = normalizeEmails(emails);
-    await fs.writeFile(dataFilePath, JSON.stringify(normalized, null, 2), 'utf8');
+    try {
+        await fs.writeFile(dataFilePath, JSON.stringify(normalized, null, 2), 'utf8');
+    } catch {
+        // In environments without persistent storage, file writes are non-fatal
+    }
     return normalized;
 };
 
 const getAdminEmails = async () => {
     const envEmails = normalizeEmails((process.env.ADMIN_EMAILS || '').split(','));
+    if (envEmails.length > 0 || process.env.NODE_ENV === 'production') {
+        return envEmails;
+    }
     const storedEmails = await readStoredAdminEmails();
     return normalizeEmails([...envEmails, ...storedEmails]);
 };

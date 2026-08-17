@@ -1,7 +1,30 @@
 const express = require('express');
 const router = express.Router();
+const jwt = require('jsonwebtoken');
 const { supabase } = require('../config/supabase');
 const { sendGenericError, sendGenericMessage } = require('../utils/errorResponse');
+
+const optionalProtect = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    try {
+      const token = authHeader.split(' ')[1];
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', decoded.id)
+        .maybeSingle();
+
+      if (!error && data) {
+        req.user = data;
+      }
+    } catch {
+      // Allow execution to continue so x-api-key can still be validated
+    }
+  }
+  next();
+};
 
 /**
  * Health Check Endpoint
@@ -50,8 +73,11 @@ router.get('/', async (req, res) => {
  * Returns detailed schema validation
  * Protected: Admin only
  */
-router.get('/schema', async (req, res) => {
-  if (req.headers['x-api-key'] !== process.env.ADMIN_API_KEY && !req.user?.role === 'admin') {
+router.get('/schema', optionalProtect, async (req, res) => {
+  const isApiKeyValid = Boolean(process.env.ADMIN_API_KEY && req.headers['x-api-key'] === process.env.ADMIN_API_KEY);
+  const isAdminUser = req.user?.role === 'admin';
+
+  if (!isApiKeyValid && !isAdminUser) {
     return sendGenericMessage(res, 401);
   }
 
@@ -143,8 +169,11 @@ router.get('/schema', async (req, res) => {
  * Returns check of required environment variables
  * Protected: Admin only
  */
-router.get('/env', async (req, res) => {
-  if (req.headers['x-api-key'] !== process.env.ADMIN_API_KEY && !req.user?.role === 'admin') {
+router.get('/env', optionalProtect, async (req, res) => {
+  const isApiKeyValid = Boolean(process.env.ADMIN_API_KEY && req.headers['x-api-key'] === process.env.ADMIN_API_KEY);
+  const isAdminUser = req.user?.role === 'admin';
+
+  if (!isApiKeyValid && !isAdminUser) {
     return sendGenericMessage(res, 401);
   }
 
