@@ -27,16 +27,23 @@ const Landing = () => {
     const { login } = useAuth();
     const navigate = useNavigate();
     const [message, setMessage] = useState('');
+    const [isLoggingIn, setIsLoggingIn] = useState(false);
+    const [loginStatusText, setLoginStatusText] = useState('Signing in...');
     const [legalModal, setLegalModal] = useState(null); // 'privacy' | 'terms' | null
 
     const handleGoogleSuccess = async (response) => {
         try {
             setMessage('');
+            setIsLoggingIn(true);
+            setLoginStatusText('Verifying account and signing in...');
             await login(response.credential);
+            setLoginStatusText('Login successful! Redirecting to your dashboard...');
             navigate('/student/home', { replace: true });
         } catch (error) {
             logClientError('Google login failed', error);
             setMessage(getGenericErrorMessage());
+            setIsLoggingIn(false);
+            setLoginStatusText('');
         }
     };
 
@@ -117,17 +124,24 @@ const Landing = () => {
                                     Access class-wise lessons and practice test papers with your Google account.
                                 </p>
 
-                                <div className="flex justify-center items-center py-1">
-                                    <GoogleLogin
-                                        onSuccess={handleGoogleSuccess}
-                                        onError={() => setMessage(getGenericErrorMessage())}
-                                        shape="pill"
-                                        theme="outline"
-                                        size="large"
-                                        text="continue_with"
-                                        width="280"
-                                    />
-                                </div>
+                                {isLoggingIn ? (
+                                    <div className="py-4 flex flex-col items-center justify-center gap-2.5">
+                                        <div className="w-8 h-8 rounded-full border-3 border-indigo-200 border-t-primary animate-spin" />
+                                        <p className="text-xs sm:text-sm font-bold text-slate-800">{loginStatusText}</p>
+                                    </div>
+                                ) : (
+                                    <div className="flex justify-center items-center py-1">
+                                        <GoogleLogin
+                                            onSuccess={handleGoogleSuccess}
+                                            onError={() => setMessage(getGenericErrorMessage())}
+                                            shape="pill"
+                                            theme="outline"
+                                            size="large"
+                                            text="continue_with"
+                                            width="280"
+                                        />
+                                    </div>
+                                )}
 
                                 {message && (
                                     <p className="text-xs text-red-600 mt-3 font-medium bg-red-50 py-1.5 px-3 rounded-lg border border-red-200">
@@ -442,15 +456,22 @@ const Landing = () => {
                         Sign in easily with Google to access lessons, class playlists, and practice tests.
                     </p>
                     <div className="inline-block bg-white p-4 rounded-2xl shadow-xl">
-                        <div className="flex justify-center">
-                            <GoogleLogin
-                                onSuccess={handleGoogleSuccess}
-                                onError={() => setMessage(getGenericErrorMessage())}
-                                shape="pill"
-                                theme="outline"
-                                size="large"
-                            />
-                        </div>
+                        {isLoggingIn ? (
+                            <div className="py-3 px-6 flex items-center justify-center gap-3">
+                                <div className="w-5 h-5 rounded-full border-2 border-indigo-200 border-t-primary animate-spin" />
+                                <span className="text-xs sm:text-sm font-bold text-slate-800">{loginStatusText}</span>
+                            </div>
+                        ) : (
+                            <div className="flex justify-center">
+                                <GoogleLogin
+                                    onSuccess={handleGoogleSuccess}
+                                    onError={() => setMessage(getGenericErrorMessage())}
+                                    shape="pill"
+                                    theme="outline"
+                                    size="large"
+                                />
+                            </div>
+                        )}
                     </div>
                 </div>
             </section>
@@ -542,6 +563,22 @@ const Landing = () => {
                     </div>
                 </div>
             </footer>
+
+            {/* Full-screen Loading Overlay for Login */}
+            {isLoggingIn && (
+                <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl border border-slate-200 text-center flex flex-col items-center gap-4">
+                        <div className="w-12 h-12 rounded-full border-4 border-indigo-100 border-t-primary animate-spin shadow-xs" />
+                        <div>
+                            <h3 className="text-base sm:text-lg font-bold text-slate-900">{loginStatusText}</h3>
+                            <p className="text-xs text-slate-500 mt-1">Please wait while we log you in and prepare your dashboard.</p>
+                        </div>
+                        <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-1">
+                            <div className="bg-primary h-full w-2/3 animate-pulse rounded-full" />
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Privacy Policy & Terms Modal */}
             {legalModal && (

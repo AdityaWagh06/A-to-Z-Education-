@@ -200,8 +200,8 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }) => {
             onClick={handleOverlayClick}
         >
             <LoadingOverlay 
-                isLoading={isLoading && !successMessage}
-                message="Authenticating..."
+                isLoading={isLoading}
+                message={successMessage || "Signing in..."}
             />
             
             <div 
