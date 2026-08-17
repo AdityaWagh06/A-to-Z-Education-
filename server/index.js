@@ -20,6 +20,10 @@ dotenv.config();
 
 const app = express();
 app.disable('x-powered-by');
+app.use(helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginEmbedderPolicy: false
+}));
 
 const requiredEnvVars = ['JWT_SECRET', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];
 const missingEnvVars = requiredEnvVars.filter((key) => !process.env[key]);
@@ -29,7 +33,7 @@ if (missingEnvVars.length > 0) {
 }
 
 if (process.env.NODE_ENV === 'production' && process.env.ALLOW_DEV_GOOGLE_BYPASS === 'true') {
-    console.warn('Security warning: ALLOW_DEV_GOOGLE_BYPASS is enabled in production. Disable it immediately.');
+    throw new Error('ALLOW_DEV_GOOGLE_BYPASS must not be enabled in production. Aborting startup.');
 }
 
 
@@ -84,7 +88,7 @@ app.use(cors({
     }
 }));
 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', require('./routes/fileRoutes'));
 
 // Razorpay webhook signatures require the raw request body.
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));

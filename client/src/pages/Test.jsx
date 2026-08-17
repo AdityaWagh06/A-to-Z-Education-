@@ -207,7 +207,7 @@ const Test = () => {
         setPdfLoading(true);
 
         try {
-            const response = await axios.get(url, { responseType: 'arraybuffer' });
+            const response = await axios.get(url, { ...getAuthConfig(), responseType: 'arraybuffer' });
             const fileBytes = new Uint8Array(response.data);
             setPdfData(fileBytes);
 
