@@ -116,7 +116,7 @@ const googleLogin = async (req, res) => {
             googleId = payload.sub;
             picture = payload.picture;
         } catch (verifyError) {
-            if (process.env.ALLOW_DEV_GOOGLE_BYPASS !== 'true') {
+            if (process.env.NODE_ENV === 'production' || process.env.ALLOW_DEV_GOOGLE_BYPASS !== 'true') {
                 throw verifyError;
             }
 
