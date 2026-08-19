@@ -115,12 +115,16 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }) => {
             if (defaultTab === 'register') {
                 setSuccessMessage('Checking your account...');
                 try {
-                    await login(response.credential, {}, 'login');
+                    const authUser = await login(response.credential, {}, 'login');
                     setSuccessMessage('Account already exists. Logged in successfully! Redirecting...');
                     setTimeout(() => {
                         onClose();
                         clearRegistrationState({ setStep, setGoogleCredential, setName, setMobile, setStandard, setAuthError, setSuccessMessage });
-                        navigate('/student/home', { replace: true });
+                        if (authUser?.role === 'admin') {
+                            navigate('/admin/dashboard', { replace: true });
+                        } else {
+                            navigate('/student/home', { replace: true });
+                        }
                     }, 500);
                     return;
                 } catch (existingCheckError) {
@@ -139,11 +143,15 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }) => {
                 setStep('details');
             } else {
                 setSuccessMessage('Logging in...');
-                await login(response.credential, {}, 'login');
+                const authUser = await login(response.credential, {}, 'login');
                 setSuccessMessage('Login successful! Redirecting...');
                 setTimeout(() => {
                     onClose();
-                    navigate('/student/home', { replace: true });
+                    if (authUser?.role === 'admin') {
+                        navigate('/admin/dashboard', { replace: true });
+                    } else {
+                        navigate('/student/home', { replace: true });
+                    }
                 }, 500);
             }
         } catch (error) {

@@ -140,14 +140,14 @@ export const AuthProvider = ({ children }) => {
           const sessionUser = data?.session?.user;
           if (sessionUser && isMountedRef.current) {
             // Check if this is a different user (multi-user scenario)
-            const shouldUpdate = !user || user._id !== sessionUser.id;
+            const shouldUpdate = !user;
             
             if (shouldUpdate) {
               persistUser({
                 _id: sessionUser.id,
-                name: sessionUser.user_metadata?.full_name || sessionUser.email?.split('@')[0] || 'Student',
+                name: sessionUser.user_metadata?.full_name || sessionUser.email?.split('@')[0] || 'User',
                 email: sessionUser.email,
-                role: 'student',
+                role: sessionUser.user_metadata?.role || user?.role || 'student',
                 standard: null,
               });
               setAuthSource('supabase');
@@ -214,14 +214,14 @@ export const AuthProvider = ({ children }) => {
         // Prevent overwriting state if session belongs to another tab/device
         // by comparing user IDs
         if (sessionUser) {
-          const shouldUpdate = !user || user._id !== sessionUser.id;
+          const shouldUpdate = !user;
           
           if (shouldUpdate) {
             persistUser({
               _id: sessionUser.id,
-              name: sessionUser.user_metadata?.full_name || sessionUser.email?.split('@')[0] || 'Student',
+              name: sessionUser.user_metadata?.full_name || sessionUser.email?.split('@')[0] || 'User',
               email: sessionUser.email,
-              role: 'student',
+              role: sessionUser.user_metadata?.role || user?.role || 'student',
               standard: null,
             });
             setAuthSource('supabase');

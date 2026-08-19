@@ -35,10 +35,13 @@ const Landing = () => {
         try {
             setMessage('');
             setIsLoggingIn(true);
-            setLoginStatusText('Verifying account and signing in...');
-            await login(response.credential);
+            const authUser = await login(response.credential);
             setLoginStatusText('Login successful! Redirecting to your dashboard...');
-            navigate('/student/home', { replace: true });
+            if (authUser?.role === 'admin') {
+                navigate('/admin/dashboard', { replace: true });
+            } else {
+                navigate('/student/home', { replace: true });
+            }
         } catch (error) {
             logClientError('Google login failed', error);
             setMessage(getGenericErrorMessage());

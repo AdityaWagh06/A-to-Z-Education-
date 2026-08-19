@@ -22,7 +22,8 @@ const buildProgress = () => ({
 
 const getRoleForEmail = async (email) => {
     const adminEmails = await getAdminEmails();
-    return adminEmails.includes((email || '').toLowerCase()) ? 'admin' : 'student';
+    const clean = String(email || '').trim().toLowerCase();
+    return adminEmails.some(a => String(a || '').trim().toLowerCase() === clean) ? 'admin' : 'student';
 };
 
 const decodeJwtPayload = (token) => {
@@ -144,7 +145,6 @@ const googleLogin = async (req, res) => {
             console.warn('Google token verification failed, using dev bypass.');
         }
 
-        const resolvedRole = await getRoleForEmail(email);
         const parsedStandard = Number(standard);
         const hasValidStandard = Number.isInteger(parsedStandard) && parsedStandard > 0;
 
@@ -160,6 +160,9 @@ const googleLogin = async (req, res) => {
         if (!existing && authMode === 'login') {
             return sendGenericMessage(res, 404);
         }
+
+        const isEmailAdmin = (await getRoleForEmail(email)) === 'admin';
+        const resolvedRole = (existing?.role === 'admin' || isEmailAdmin) ? 'admin' : 'student';
 
         let user = existing;
         if (user) {
