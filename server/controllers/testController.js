@@ -172,12 +172,26 @@ const createTest = async (req, res) => {
         const pdfFile = req.files.pdf;
         const answerSheetFile = req.files.answerSheet;
 
+        const isPdf = (file) => {
+            if (!file) return false;
+            const ext = path.extname(String(file.name || '')).toLowerCase();
+            return ext === '.pdf' && (file.mimetype === 'application/pdf' || file.mimetype === 'application/octet-stream');
+        };
+
+        if (!isPdf(pdfFile)) {
+            return res.status(400).json({ message: 'Only valid PDF files are allowed for tests.' });
+        }
+
+        if (answerSheetFile && !isPdf(answerSheetFile)) {
+            return res.status(400).json({ message: 'Only valid PDF files are allowed for answer sheets.' });
+        }
+
         // Save PDF locally
         const pdfName = `test-${Date.now()}-${sanitizeUploadName(pdfFile.name)}`;
-        const pdfPath = path.join(__dirname, '../uploads/tests', pdfName);
+        const uploadDir = path.resolve(path.join(__dirname, '../uploads/tests'));
+        const pdfPath = path.join(uploadDir, pdfName);
         
         // Ensure directory exists
-        const uploadDir = path.join(__dirname, '../uploads/tests');
         if (!fs.existsSync(uploadDir)){
             fs.mkdirSync(uploadDir, { recursive: true });
         }
@@ -188,7 +202,7 @@ const createTest = async (req, res) => {
         let relativeAnswerSheetPath = null;
         if (answerSheetFile) {
             const answerName = `answers-${Date.now()}-${sanitizeUploadName(answerSheetFile.name)}`;
-            const answerPath = path.join(__dirname, '../uploads/tests', answerName);
+            const answerPath = path.join(uploadDir, answerName);
             await answerSheetFile.mv(answerPath);
             relativeAnswerSheetPath = `/uploads/tests/${answerName}`;
         }

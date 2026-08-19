@@ -6,8 +6,22 @@ const { protect } = require('../middleware/authMiddleware');
 const { getSupabaseAdmin } = require('../config/supabase');
 
 router.get('/tests/:filename', protect, async (req, res) => {
+    const rawFilename = req.params.filename;
+    const safeFilename = path.basename(rawFilename);
+
+    if (!safeFilename || safeFilename !== rawFilename || safeFilename.includes('..')) {
+        return res.status(400).json({ message: 'Invalid file parameter' });
+    }
+
+    const uploadBaseDir = path.resolve(path.join(__dirname, '../uploads/tests'));
+    const filePath = path.resolve(path.join(uploadBaseDir, safeFilename));
+
+    if (!filePath.startsWith(uploadBaseDir)) {
+        return res.status(403).json({ message: 'Access denied' });
+    }
+
     const supabase = getSupabaseAdmin();
-    const relativePath = `/uploads/tests/${req.params.filename}`;
+    const relativePath = `/uploads/tests/${safeFilename}`;
 
     const { data: test, error } = await supabase
         .from('tests')
@@ -32,7 +46,6 @@ router.get('/tests/:filename', protect, async (req, res) => {
         if (!purchased) return res.status(403).json({ message: 'Not purchased' });
     }
 
-    const filePath = path.join(__dirname, '..', relativePath);
     if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'Not found' });
     return res.sendFile(filePath);
 });
