@@ -28,7 +28,7 @@ const parseJwt = (token) => {
     }
 };
 
-const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }) => {
+const AuthModal = ({ isOpen, onClose, defaultTab = 'login', initialCredential = null, initialName = '' }) => {
     const { login } = useAuth();
     const navigate = useNavigate();
     const modalRef = useRef(null);
@@ -57,7 +57,12 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }) => {
             return;
         }
 
-        if (defaultTab === 'login') {
+        if (initialCredential) {
+            setGoogleCredential(initialCredential);
+            setName(initialName || '');
+            setStep('details');
+            setSuccessMessage('Welcome! You are a new student. Please select your Standard to complete registration.');
+        } else if (defaultTab === 'login') {
             setStep('initial');
         }
 
@@ -111,42 +116,21 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }) => {
         try {
             setAuthError('');
             setIsLoading(true);
+            setSuccessMessage('Verifying Google account...');
             
-            if (defaultTab === 'register') {
-                setSuccessMessage('Checking your account...');
-                try {
-                    const authUser = await login(response.credential, {}, 'login');
-                    setSuccessMessage('Account already exists. Logged in successfully! Redirecting...');
-                    setTimeout(() => {
-                        onClose();
-                        clearRegistrationState({ setStep, setGoogleCredential, setName, setMobile, setStandard, setAuthError, setSuccessMessage });
-                        if (authUser?.role === 'admin') {
-                            navigate('/admin/dashboard', { replace: true });
-                        } else {
-                            navigate('/student/home', { replace: true });
-                        }
-                    }, 500);
-                    return;
-                } catch (existingCheckError) {
-                    const status = Number(existingCheckError?.response?.status || 0);
-                    if (status !== 404) {
-                        throw existingCheckError;
-                    }
-                }
+            const authUser = await login(response.credential, {}, 'login');
 
+            if (authUser?.requiresProfileCompletion) {
                 const payload = parseJwt(response.credential);
-                if (payload) {
-                    setName(payload.name || '');
-                }
+                setName(authUser.name || payload?.name || '');
                 setGoogleCredential(response.credential);
-                setSuccessMessage('Google account verified! Fill in your details.');
+                setSuccessMessage('Welcome! You are a new student. Please select your Standard to complete registration.');
                 setStep('details');
             } else {
-                setSuccessMessage('Logging in...');
-                const authUser = await login(response.credential, {}, 'login');
-                setSuccessMessage('Login successful! Redirecting...');
+                setSuccessMessage('Logged in successfully! Redirecting...');
                 setTimeout(() => {
                     onClose();
+                    clearRegistrationState({ setStep, setGoogleCredential, setName, setMobile, setStandard, setAuthError, setSuccessMessage });
                     if (authUser?.role === 'admin') {
                         navigate('/admin/dashboard', { replace: true });
                     } else {

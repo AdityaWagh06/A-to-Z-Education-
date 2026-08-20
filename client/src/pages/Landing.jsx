@@ -21,7 +21,7 @@ import {
     Sparkles
 } from 'lucide-react';
 import { getGenericErrorMessage, logClientError } from '../lib/errorHandling';
-import siteLogo from '../assets/image.png';
+import AuthModal from '../components/AuthModal';
 
 const Landing = () => {
     const { login } = useAuth();
@@ -30,12 +30,26 @@ const Landing = () => {
     const [isLoggingIn, setIsLoggingIn] = useState(false);
     const [loginStatusText, setLoginStatusText] = useState('Signing in...');
     const [legalModal, setLegalModal] = useState(null); // 'privacy' | 'terms' | null
+    const [newStudentModalOpen, setNewStudentModalOpen] = useState(false);
+    const [pendingCredential, setPendingCredential] = useState(null);
+    const [pendingName, setPendingName] = useState('');
 
     const handleGoogleSuccess = async (response) => {
         try {
             setMessage('');
             setIsLoggingIn(true);
+            setLoginStatusText('Verifying Google account...');
             const authUser = await login(response.credential);
+
+            if (authUser?.requiresProfileCompletion) {
+                setIsLoggingIn(false);
+                setLoginStatusText('');
+                setPendingCredential(response.credential);
+                setPendingName(authUser.name || '');
+                setNewStudentModalOpen(true);
+                return;
+            }
+
             setLoginStatusText('Login successful! Redirecting to your dashboard...');
             if (authUser?.role === 'admin') {
                 navigate('/admin/dashboard', { replace: true });
@@ -645,6 +659,19 @@ const Landing = () => {
                     </div>
                 </div>
             )}
+
+            {/* New Student Registration Profile Completion Modal */}
+            <AuthModal
+                isOpen={newStudentModalOpen}
+                onClose={() => {
+                    setNewStudentModalOpen(false);
+                    setPendingCredential(null);
+                    setPendingName('');
+                }}
+                defaultTab="register"
+                initialCredential={pendingCredential}
+                initialName={pendingName}
+            />
         </div>
     );
 };

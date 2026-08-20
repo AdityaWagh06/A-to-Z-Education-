@@ -189,6 +189,18 @@ const googleLogin = async (req, res) => {
             if (updateError) throw updateError;
             user = updated;
         } else {
+            // If user is new student and standard is not provided yet, prompt frontend for profile details
+            if (!hasValidStandard && resolvedRole !== 'admin') {
+                return res.json({
+                    isNewUser: true,
+                    requiresProfileCompletion: true,
+                    name,
+                    email,
+                    picture,
+                    googleCredential: token
+                });
+            }
+
             const insertPayload = {
                 name,
                 email,
@@ -243,7 +255,9 @@ const googleLogin = async (req, res) => {
             purchasedStandardBoxes: user.purchased_standard_boxes || [],
             token: generateToken({ id: user.id, role: user.role || 'student' }),
             picture: picture || user.picture,
-            mobile_no: user.mobile_no
+            mobile_no: user.mobile_no,
+            isNewUser: !existing,
+            requiresProfileCompletion: false
         });
 
     } catch (error) {
