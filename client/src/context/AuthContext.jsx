@@ -270,10 +270,13 @@ export const AuthProvider = ({ children }) => {
       ...extraData,
       mode,
     });
-    localStorage.setItem('token', res.data.token);
-    axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
-    persistUser(res.data);
-    setAuthSource('backend');
+
+    if (res.data && res.data.token && !res.data.requiresProfileCompletion) {
+      localStorage.setItem('token', res.data.token);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
+      persistUser(res.data);
+      setAuthSource('backend');
+    }
     return res.data;
   };
 
