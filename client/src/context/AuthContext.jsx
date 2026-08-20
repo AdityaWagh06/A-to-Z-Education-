@@ -85,9 +85,14 @@ export const AuthProvider = ({ children }) => {
    */
   const hydrateAuth = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const rawToken = localStorage.getItem('token');
+      const token = (rawToken && rawToken !== 'undefined' && rawToken !== 'null') ? rawToken : null;
       const cachedUserRaw = localStorage.getItem('authUser');
       const cachedUser = cachedUserRaw ? JSON.parse(cachedUserRaw) : null;
+
+      if (!token && rawToken) {
+        localStorage.removeItem('token');
+      }
 
       // Start with cached user if available (instant UX)
       if (cachedUser && isMountedRef.current) {
