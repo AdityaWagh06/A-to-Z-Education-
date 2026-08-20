@@ -155,12 +155,6 @@ const googleLogin = async (req, res) => {
             .eq('email', email)
             .maybeSingle();
         
-        if (findError) throw findError;
-
-        if (!existing && authMode === 'login') {
-            return sendGenericMessage(res, 404);
-        }
-
         const isEmailAdmin = (await getRoleForEmail(email)) === 'admin';
         const resolvedRole = (existing?.role === 'admin' || isEmailAdmin) ? 'admin' : 'student';
 
