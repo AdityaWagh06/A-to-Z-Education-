@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
-const { supabase } = require('../config/supabase');
+const { getSupabaseAdmin } = require('../config/supabase');
 const { sendGenericError, sendGenericMessage } = require('../utils/errorResponse');
 
 const optionalProtect = async (req, res, next) => {
@@ -10,6 +10,7 @@ const optionalProtect = async (req, res, next) => {
     try {
       const token = authHeader.split(' ')[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const supabase = getSupabaseAdmin();
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -45,6 +46,7 @@ router.get('/', async (req, res) => {
 
     // Check database connectivity
     try {
+      const supabase = getSupabaseAdmin();
       const { data, error } = await supabase
         .from('users')
         .select('count', { count: 'exact' })
@@ -111,6 +113,7 @@ router.get('/schema', optionalProtect, async (req, res) => {
 
     const results = {};
     const issues = [];
+    const supabase = getSupabaseAdmin();
 
     for (const [tableName, requiredColumns] of Object.entries(tableSchema)) {
       try {
