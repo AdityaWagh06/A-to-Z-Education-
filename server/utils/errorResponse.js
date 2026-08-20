@@ -7,7 +7,13 @@ const sendGenericError = (res, error, statusCode = 500, context = '') => {
         console.error(error);
     }
 
-    return res.status(statusCode).json({ message: GENERIC_ERROR_MESSAGE });
+    const isProd = process.env.NODE_ENV === 'production';
+    const message = isProd ? GENERIC_ERROR_MESSAGE : (error?.message || GENERIC_ERROR_MESSAGE);
+
+    return res.status(statusCode).json({
+        message,
+        ...(isProd ? {} : { details: error?.stack || error })
+    });
 };
 
 const sendGenericMessage = (res, statusCode = 500) => {
