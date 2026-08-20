@@ -188,7 +188,7 @@ const Navbar = () => {
                                         to="/about"
                                         className="px-3 sm:px-4 py-2 rounded-md font-semibold text-gray-700 border border-gray-300 hover:bg-gray-50 transition flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base whitespace-nowrap"
                                     >
-                                        <Info size={16} /> <span className="hidden sm:inline">About</span>
+                                        <Info size={16} /> <span>About</span>
                                     </Link>
                                     <button 
                                         onClick={openRegister}

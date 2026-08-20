@@ -6,10 +6,16 @@ const { protect } = require('../middleware/authMiddleware');
 const { getSupabaseAdmin } = require('../config/supabase');
 
 router.get('/tests/:filename', protect, async (req, res) => {
-    const rawFilename = req.params.filename;
+    let rawFilename = req.params.filename;
+    try {
+        rawFilename = decodeURIComponent(rawFilename);
+    } catch {
+        // Keep rawFilename if decoding fails
+    }
+
     const safeFilename = path.basename(rawFilename);
 
-    if (!safeFilename || safeFilename !== rawFilename || safeFilename.includes('..')) {
+    if (!safeFilename || safeFilename.includes('..')) {
         return res.status(400).json({ message: 'Invalid file parameter' });
     }
 
@@ -26,7 +32,7 @@ router.get('/tests/:filename', protect, async (req, res) => {
     const { data: test, error } = await supabase
         .from('tests')
         .select('id, standard, is_locked, pdf_path, answer_sheet_path')
-        .or(`pdf_path.eq.${relativePath},answer_sheet_path.eq.${relativePath}`)
+        .or(`pdf_path.eq.${relativePath},answer_sheet_path.eq.${relativePath},pdf_path.ilike.%${safeFilename}%,answer_sheet_path.ilike.%${safeFilename}%`)
         .maybeSingle();
 
     if (error || !test) return res.status(404).json({ message: 'Not found' });

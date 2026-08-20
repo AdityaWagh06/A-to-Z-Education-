@@ -66,7 +66,7 @@ const getTests = async (req, res) => {
         let query = supabase.from('tests').select('*').order('created_at', { ascending: false });
 
         if (standard) query = query.eq('standard', Number(standard));
-        if (subject) query = query.eq('subject', subject);
+        if (subject) query = query.ilike('subject', subject);
 
         const { data, error } = await query;
         if (error) throw error;
@@ -290,6 +290,23 @@ const submitTest = async (req, res) => {
 const deleteTest = async (req, res) => {
     try {
         const supabase = getSupabaseAdmin();
+        const { data: test } = await supabase.from('tests').select('pdf_path, answer_sheet_path').eq('id', req.params.id).maybeSingle();
+        
+        if (test) {
+            if (test.pdf_path) {
+                const pdfFile = path.join(__dirname, '..', test.pdf_path);
+                if (fs.existsSync(pdfFile)) {
+                    try { fs.unlinkSync(pdfFile); } catch {}
+                }
+            }
+            if (test.answer_sheet_path) {
+                const answerFile = path.join(__dirname, '..', test.answer_sheet_path);
+                if (fs.existsSync(answerFile)) {
+                    try { fs.unlinkSync(answerFile); } catch {}
+                }
+            }
+        }
+
         const { error } = await supabase.from('tests').delete().eq('id', req.params.id);
         if (error) throw error;
         res.json({ message: 'Test deleted' });

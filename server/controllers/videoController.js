@@ -11,7 +11,7 @@ const getVideos = async (req, res) => {
         let query = supabase.from('videos').select('*').order('created_at', { ascending: true });
 
         if (standard) query = query.eq('standard', Number(standard));
-        if (subject) query = query.eq('subject', subject);
+        if (subject) query = query.ilike('subject', subject);
 
         const { data, error } = await query;
         if (error) throw error;

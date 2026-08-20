@@ -17,7 +17,7 @@ const getSubjectStats = (progress, key) => {
     const testsTaken = Array.isArray(subject.testsTaken) ? subject.testsTaken : [];
 
     const totalScore = testsTaken.reduce((acc, t) => acc + (t.score || 0), 0);
-    const totalMarks = testsTaken.reduce((acc, t) => acc + (t.total || 0), 0);
+    const totalMarks = testsTaken.reduce((acc, t) => acc + (t.total || t.totalQuestions || 0), 0);
     const accuracy = totalMarks > 0 ? Math.round((totalScore / totalMarks) * 100) : 0;
 
     return {
