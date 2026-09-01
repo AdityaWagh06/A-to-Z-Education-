@@ -88,7 +88,7 @@ const getTests = async (req, res) => {
                 hasAnswerSheet: Boolean(t.answer_sheet_path),
                 isPurchased,
                 isStandardPurchased,
-                questions: t.questions || [],
+                questions: hideContent ? [] : (t.questions || []),
                 timeLimit: t.time_limit,
                 isLocked: t.is_locked,
                 createdAt: t.created_at

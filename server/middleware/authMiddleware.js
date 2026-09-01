@@ -41,7 +41,7 @@ const admin = (req, res, next) => {
     if (req.user && req.user.role === 'admin') {
         next();
     } else {
-        return sendGenericMessage(res, 401);
+        return sendGenericMessage(res, 403);
     }
 };
 

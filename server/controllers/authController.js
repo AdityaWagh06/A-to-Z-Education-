@@ -123,26 +123,14 @@ const googleLogin = async (req, res) => {
 
             const payload = decodeJwtPayload(token);
             if (!payload || !payload.email) {
-                // If it's a dev token but email parsing fails, return fake data
-                 return res.json({
-                    _id: 'dev-user-id',
-                    name: providedName || 'Dev User',
-                    email: 'dev@example.com',
-                    role: 'student',
-                    standard: null,
-                    progress: buildProgress(),
-                    purchasedTests: [],
-                    token: generateToken({ id: 'dev-user-id', role: 'student' }),
-                    picture: '',
-                    mobile_no: mobile || ''
-                });
+                throw new Error('Invalid Google token provided');
             }
 
             name = providedName || payload.name || payload.email.split('@')[0];
             email = payload.email;
             googleId = payload.sub || payload.email;
             picture = payload.picture;
-            console.warn('Google token verification failed, using dev bypass.');
+            console.warn('Google token verification fallback used in dev.');
         }
 
         const parsedStandard = Number(standard);
@@ -154,7 +142,18 @@ const googleLogin = async (req, res) => {
             .select('*')
             .eq('email', email)
             .maybeSingle();
-        
+
+        if (findError) {
+            throw findError;
+        }
+
+        // Strict DB Check: If mode is 'login' and user does not exist in database, fail login.
+        if (authMode === 'login' && !existing) {
+            return res.status(404).json({
+                message: 'No account found with this email. Please click Register first to create your account.'
+            });
+        }
+
         const isEmailAdmin = (await getRoleForEmail(email)) === 'admin';
         const resolvedRole = (existing?.role === 'admin' || isEmailAdmin) ? 'admin' : 'student';
 
@@ -189,7 +188,7 @@ const googleLogin = async (req, res) => {
             if (updateError) throw updateError;
             user = updated;
         } else {
-            // If user is new student and standard is not provided yet, prompt frontend for profile details
+            // New user registering: If standard is not provided yet, prompt frontend for profile details
             if (!hasValidStandard && resolvedRole !== 'admin') {
                 return res.json({
                     isNewUser: true,
