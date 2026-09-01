@@ -32,6 +32,8 @@ const Landing = () => {
     const [loginStatusText, setLoginStatusText] = useState('Signing in...');
     const [legalModal, setLegalModal] = useState(null); // 'privacy' | 'terms' | null
     const [newStudentModalOpen, setNewStudentModalOpen] = useState(false);
+    const [authModalOpen, setAuthModalOpen] = useState(false);
+    const [authModalTab, setAuthModalTab] = useState('register');
     const [pendingCredential, setPendingCredential] = useState(null);
     const [pendingName, setPendingName] = useState('');
 
@@ -162,9 +164,23 @@ const Landing = () => {
                                 )}
 
                                 {message && (
-                                    <p className="text-xs text-red-600 mt-3 font-medium bg-red-50 py-1.5 px-3 rounded-lg border border-red-200">
-                                        {message}
-                                    </p>
+                                    <div className="mt-4 p-3.5 bg-blue-50/90 border border-blue-200 rounded-xl flex items-start gap-2.5 text-left text-xs sm:text-sm text-blue-900 shadow-xs animate-in fade-in duration-150">
+                                        <Sparkles size={18} className="text-blue-600 shrink-0 mt-0.5" />
+                                        <div className="flex-1 leading-snug">
+                                            <span>{message} </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setMessage('');
+                                                    setAuthModalTab('register');
+                                                    setAuthModalOpen(true);
+                                                }}
+                                                className="ml-1 inline-flex items-center gap-1 font-bold text-blue-700 hover:text-blue-900 underline cursor-pointer hover:scale-105 transition-transform"
+                                            >
+                                                Click here to Register →
+                                            </button>
+                                        </div>
+                                    </div>
                                 )}
 
                                 <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-center gap-4 text-xs font-medium text-slate-500">
@@ -661,15 +677,16 @@ const Landing = () => {
                 </div>
             )}
 
-            {/* New Student Registration Profile Completion Modal */}
+            {/* Auth / Profile Completion Modal */}
             <AuthModal
-                isOpen={newStudentModalOpen}
+                isOpen={newStudentModalOpen || authModalOpen}
                 onClose={() => {
                     setNewStudentModalOpen(false);
+                    setAuthModalOpen(false);
                     setPendingCredential(null);
                     setPendingName('');
                 }}
-                defaultTab="register"
+                defaultTab={authModalTab}
                 initialCredential={pendingCredential}
                 initialName={pendingName}
             />
