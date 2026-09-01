@@ -6,12 +6,11 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from './context/AuthContext';
 import ErrorBoundary from './components/ErrorBoundary';
 
-const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'missing-client-id.apps.googleusercontent.com';
 
 const AppProviders = ({ children }) => {
-  if (!googleClientId) {
-    console.warn('VITE_GOOGLE_CLIENT_ID is not set. Google sign-in UI may not work until it is configured.');
-    return <AuthProvider>{children}</AuthProvider>;
+  if (!import.meta.env.VITE_GOOGLE_CLIENT_ID) {
+    console.warn('VITE_GOOGLE_CLIENT_ID is not set. Google sign-in features require a valid Client ID.');
   }
 
   return (
