@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { getGenericErrorMessage, logClientError } from '../lib/errorHandling';
 import AuthModal from '../components/AuthModal';
+import siteLogo from '../assets/image.png';
 
 const Landing = () => {
     const { login } = useAuth();
