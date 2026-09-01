@@ -118,7 +118,8 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login', initialCredential = 
             setIsLoading(true);
             setSuccessMessage('Verifying Google account...');
             
-            const authUser = await login(response.credential, {}, 'login');
+            const mode = defaultTab === 'register' ? 'register' : 'login';
+            const authUser = await login(response.credential, {}, mode);
 
             if (authUser?.requiresProfileCompletion) {
                 const payload = parseJwt(response.credential);
@@ -139,8 +140,9 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login', initialCredential = 
                 }, 500);
             }
         } catch (error) {
-            logClientError('Login failed', error);
-            setAuthError(getGenericErrorMessage());
+            logClientError('Auth failed', error);
+            const serverMsg = error?.response?.data?.message;
+            setAuthError(serverMsg || getGenericErrorMessage());
         } finally {
             setIsLoading(false);
         }
