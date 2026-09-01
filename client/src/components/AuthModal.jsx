@@ -33,6 +33,7 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login', initialCredential = 
     const navigate = useNavigate();
     const modalRef = useRef(null);
     const [step, setStep] = useState('initial'); // 'initial', 'details'
+    const [activeTab, setActiveTab] = useState(defaultTab); // 'login', 'register'
     const [googleCredential, setGoogleCredential] = useState(null);
     const [name, setName] = useState('');
     const [mobile, setMobile] = useState('');
@@ -57,12 +58,14 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login', initialCredential = 
             return;
         }
 
+        setActiveTab(defaultTab);
+
         if (initialCredential) {
             setGoogleCredential(initialCredential);
             setName(initialName || '');
             setStep('details');
             setSuccessMessage('Welcome! You are a new student. Please select your Standard to complete registration.');
-        } else if (defaultTab === 'login') {
+        } else {
             setStep('initial');
         }
 
@@ -118,7 +121,7 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login', initialCredential = 
             setIsLoading(true);
             setSuccessMessage('Verifying Google account...');
             
-            const mode = defaultTab === 'register' ? 'register' : 'login';
+            const mode = activeTab === 'register' ? 'register' : 'login';
             const authUser = await login(response.credential, {}, mode);
 
             if (authUser?.requiresProfileCompletion) {
@@ -222,7 +225,7 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login', initialCredential = 
                 {/* Header */}
                 <div className="px-8 mt-5 pb-4 border-b border-gray-100 flex justify-between items-center text-center">
                     <h2 className="text-2xl font-bold text-gray-800">
-                        {step === 'details' ? 'Complete Your Profile' : (defaultTab === 'login' ? 'Welcome Back!' : 'Start Learning')}
+                        {step === 'details' ? 'Complete Your Profile' : (activeTab === 'login' ? 'Welcome Back!' : 'Start Learning')}
                     </h2>
                     <button 
                         onClick={() => {
@@ -249,15 +252,64 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login', initialCredential = 
 
                     {step === 'initial' ? (
                         <>
-                            <p className="text-gray-600 text-center mb-8">
-                                {defaultTab === 'login' 
+                            {/* Mode Switcher */}
+                            <div className="flex w-full rounded-xl bg-slate-100 p-1 mb-5">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setActiveTab('login');
+                                        setAuthError('');
+                                    }}
+                                    className={`flex-1 py-2 text-xs sm:text-sm font-bold rounded-lg transition-all ${
+                                        activeTab === 'login'
+                                            ? 'bg-white text-blue-700 shadow-sm'
+                                            : 'text-slate-600 hover:text-slate-900'
+                                    }`}
+                                >
+                                    Login
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setActiveTab('register');
+                                        setAuthError('');
+                                    }}
+                                    className={`flex-1 py-2 text-xs sm:text-sm font-bold rounded-lg transition-all ${
+                                        activeTab === 'register'
+                                            ? 'bg-white text-blue-700 shadow-sm'
+                                            : 'text-slate-600 hover:text-slate-900'
+                                    }`}
+                                >
+                                    Register
+                                </button>
+                            </div>
+
+                            <p className="text-gray-600 text-center mb-6 text-sm">
+                                {activeTab === 'login' 
                                     ? 'Login to access your courses and track progress.' 
                                     : 'Join thousands of students achieving their goals.'}
                             </p>
-                            {defaultTab === 'login' && (
-                                <p className="text-xs text-blue-700 bg-blue-50 border border-blue-100 rounded-md px-3 py-2 mb-5 text-center">
-                                    New user? Please click Register first to create your account.
-                                </p>
+
+                            {/* Soft Blue Notice Box for Auth Error with Clickable Register Link */}
+                            {authError && (
+                                <div className="w-full mb-5 p-3.5 bg-blue-50/90 border border-blue-200 rounded-xl flex items-start gap-2.5 text-left text-xs sm:text-sm text-blue-900 shadow-xs animate-in fade-in duration-150">
+                                    <AlertCircle size={18} className="text-blue-600 shrink-0 mt-0.5" />
+                                    <div className="flex-1 leading-snug">
+                                        <span>{authError} </span>
+                                        {activeTab === 'login' && (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setAuthError('');
+                                                    setActiveTab('register');
+                                                }}
+                                                className="ml-1 inline-flex items-center gap-1 font-bold text-blue-700 hover:text-blue-900 underline cursor-pointer hover:scale-105 transition-transform"
+                                            >
+                                                Click here to Register →
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
                             )}
 
                             {isLoading ? (
