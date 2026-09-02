@@ -112,9 +112,10 @@ const Test = () => {
         try {
             const subjectQuery = subject ? `?subject=${subject}` : '';
             const res = await axios.get(`${API_URL}/api/tests${subjectQuery}`, getAuthConfig());
-            setTests(res.data);
+            setTests(Array.isArray(res.data) ? res.data : []);
         } catch (error) {
-            console.error(error);
+            console.error('Failed to load tests:', error);
+            setTests([]);
         }
     };
 
@@ -124,7 +125,7 @@ const Test = () => {
             const sorted = (Array.isArray(data) ? data : []).sort((a, b) => Number(a.value) - Number(b.value));
             setStandards(sorted);
         } catch (error) {
-            console.error(error);
+            console.error('Failed to load standards:', error);
             setStandards([]);
         }
     };
@@ -134,15 +135,19 @@ const Test = () => {
             const { data } = await axios.get(`${API_URL}/api/tests/paid-standard-boxes`, getAuthConfig());
             setPaidStandardBoxes(Array.isArray(data) ? data : []);
         } catch (error) {
-            console.error(error);
+            console.error('Failed to load paid boxes:', error);
             setPaidStandardBoxes([]);
         }
     };
 
-    const freeTests = tests.filter((test) => !test.isLocked);
-    const configuredPaidBoxes = paidStandardBoxes.filter((box) => box.isActive !== false);
+    const safeTests = Array.isArray(tests) ? tests : [];
+    const safePaidBoxes = Array.isArray(paidStandardBoxes) ? paidStandardBoxes : [];
+    const safeStandards = Array.isArray(standards) ? standards : [];
+
+    const freeTests = safeTests.filter((test) => !test.isLocked);
+    const configuredPaidBoxes = safePaidBoxes.filter((box) => box.isActive !== false);
     const derivedPaidBoxes = Object.values(
-        tests
+        safeTests
             .filter((test) => test.isLocked)
             .reduce((acc, test) => {
                 const standardValue = Number(test.standard);
@@ -175,7 +180,7 @@ const Test = () => {
     }
     const paidBoxes = Array.from(paidBoxesByStandard.values()).sort((a, b) => Number(a.standard) - Number(b.standard));
     const derivedStandards = Object.values(
-        tests.reduce((acc, test) => {
+        safeTests.reduce((acc, test) => {
             const value = Number(test.standard);
             if (!acc[value]) {
                 acc[value] = { id: `derived-${value}`, value, label: `Standard ${value}` };
@@ -183,10 +188,10 @@ const Test = () => {
             return acc;
         }, {})
     );
-    const standardsToShow = standards.length > 0 ? standards : derivedStandards;
+    const standardsToShow = safeStandards.length > 0 ? safeStandards : derivedStandards;
 
     const selectedTests = activeStandard
-        ? tests.filter((test) => Number(test.standard) === Number(activeStandard))
+        ? safeTests.filter((test) => Number(test.standard) === Number(activeStandard))
         : [];
     const selectedFreeTests = selectedTests.filter((test) => !test.isLocked);
     const selectedPaidTests = selectedTests.filter((test) => test.isLocked);

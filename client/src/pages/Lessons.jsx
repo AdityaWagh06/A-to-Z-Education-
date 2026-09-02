@@ -26,7 +26,7 @@ const Lessons = () => {
             const standardQuery = standard ? `&standard=${standard}` : '';
             axios.get(`${API_URL}/api/videos?subject=${subject}${standardQuery}`)
                 .then(res => {
-                    const nextVideos = res.data || [];
+                    const nextVideos = Array.isArray(res.data) ? res.data : [];
                     setVideos(nextVideos);
 
                     if (nextVideos.length === 0) {
@@ -36,12 +36,13 @@ const Lessons = () => {
 
                     setSelectedVideo((prev) => {
                         if (!prev) return nextVideos[0];
-                        const stillExists = nextVideos.find((v) => v._id === prev._id);
+                        const prevId = prev._id || prev.id;
+                        const stillExists = nextVideos.find((v) => (v._id || v.id) === prevId);
                         return stillExists || nextVideos[0];
                     });
                 })
                 .catch(err => {
-                    console.error(err);
+                    console.error('Failed to load videos:', err);
                     setVideos([]);
                     setSelectedVideo(null);
                 })
@@ -55,28 +56,36 @@ const Lessons = () => {
         return () => {};
     }, [subject, standard]);
 
+    const safeVideos = Array.isArray(videos) ? videos : [];
+    const activeVideo = selectedVideo || safeVideos[0] || null;
+
     const handleNextLesson = () => {
-        if (!selectedVideo || videos.length === 0) return;
-        const currentIndex = videos.findIndex(v => v._id === selectedVideo._id);
+        if (!activeVideo || safeVideos.length === 0) return;
+        const activeId = activeVideo._id || activeVideo.id;
+        const currentIndex = safeVideos.findIndex(v => (v._id || v.id) === activeId);
         
-        if (currentIndex !== -1 && currentIndex < videos.length - 1) {
-            setSelectedVideo(videos[currentIndex + 1]);
+        if (currentIndex !== -1 && currentIndex < safeVideos.length - 1) {
+            setSelectedVideo(safeVideos[currentIndex + 1]);
         }
     };
 
     const handlePrevLesson = () => {
-        if (!selectedVideo || videos.length === 0) return;
-        const currentIndex = videos.findIndex(v => v._id === selectedVideo._id);
+        if (!activeVideo || safeVideos.length === 0) return;
+        const activeId = activeVideo._id || activeVideo.id;
+        const currentIndex = safeVideos.findIndex(v => (v._id || v.id) === activeId);
         
         if (currentIndex > 0) {
-            setSelectedVideo(videos[currentIndex - 1]);
+            setSelectedVideo(safeVideos[currentIndex - 1]);
         }
     };
 
-    const isFirstVideo = selectedVideo && videos.length > 0 && videos[0]._id === selectedVideo._id;
-    const isLastVideo = selectedVideo && videos.length > 0 && videos[videos.length - 1]._id === selectedVideo._id;
-    const activeVideo = selectedVideo || videos[0] || null;
-    const activeIndex = activeVideo ? videos.findIndex(v => v._id === activeVideo._id) : -1;
+    const activeId = activeVideo ? (activeVideo._id || activeVideo.id) : null;
+    const firstId = safeVideos.length > 0 ? (safeVideos[0]._id || safeVideos[0].id) : null;
+    const lastId = safeVideos.length > 0 ? (safeVideos[safeVideos.length - 1]._id || safeVideos[safeVideos.length - 1].id) : null;
+
+    const isFirstVideo = activeId && firstId && activeId === firstId;
+    const isLastVideo = activeId && lastId && activeId === lastId;
+    const activeIndex = activeId ? safeVideos.findIndex(v => (v._id || v.id) === activeId) : -1;
 
     return (
         <div className="flex flex-col md:flex-row min-h-[calc(100vh-64px)] md:h-[calc(100vh-64px)] md:overflow-hidden bg-gray-50">
@@ -84,14 +93,15 @@ const Lessons = () => {
             <div className="md:w-80 lg:w-1/4 bg-white border-r border-gray-300 overflow-y-auto hidden md:block shadow-sm">
                 <div className="p-4 font-bold text-lg border-b border-gray-300 capitalize sticky top-0 bg-white z-10 shadow-sm text-gray-800">{subject} Lessons</div>
                 <ul>
-                    {videos.map((video, index) => {
+                    {safeVideos.map((video, index) => {
                         const videoId = getYouTubeID(video.youtubeUrl);
                         const thumbnailUrl = videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : null;
-                        const isSelected = selectedVideo?._id === video._id;
+                        const vId = video._id || video.id;
+                        const isSelected = activeId === vId;
 
                         return (
                             <li 
-                                key={video._id} 
+                                key={vId || index} 
                                 onClick={() => setSelectedVideo(video)}
                                 className={`p-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer flex gap-3 transition-colors ${isSelected ? 'bg-blue-50 border-l-4 border-l-primary' : 'border-l-4 border-l-transparent'}`}
                             >
@@ -160,11 +170,12 @@ const Lessons = () => {
                             <div className="mt-6 md:hidden border border-gray-200 rounded-lg overflow-hidden">
                                 <div className="px-3 py-2 bg-gray-50 text-sm font-semibold text-gray-700">All Lessons</div>
                                 <div className="max-h-64 overflow-y-auto">
-                                    {videos.map((video, index) => {
-                                        const active = activeVideo?._id === video._id;
+                                    {safeVideos.map((video, index) => {
+                                        const vId = video._id || video.id;
+                                        const active = activeId === vId;
                                         return (
                                             <button
-                                                key={video._id}
+                                                key={vId || index}
                                                 type="button"
                                                 onClick={() => setSelectedVideo(video)}
                                                 className={`w-full text-left px-3 py-2.5 text-sm border-t first:border-t-0 transition flex items-center gap-2 ${active ? 'bg-blue-50 text-blue-700 font-semibold' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
