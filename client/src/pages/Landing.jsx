@@ -110,37 +110,32 @@ const Landing = () => {
     return (
         <div className="min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-primary selection:text-white">
             {/* Hero Section */}
-            <header className="relative overflow-hidden pt-10 pb-16 sm:pt-16 sm:pb-20 bg-gradient-to-b from-indigo-50/60 via-white to-slate-50 border-b border-slate-200/80">
+            <header className="relative overflow-hidden pt-6 pb-12 sm:pt-16 sm:pb-20 bg-gradient-to-b from-indigo-50/60 via-white to-slate-50 border-b border-slate-200/80">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-10 lg:gap-12 items-center">
                         {/* Left Column: Platform Headline & Google Sign-In */}
                         <div className="lg:col-span-7 text-center lg:text-left">
-                            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold bg-blue-100 text-blue-800 border border-blue-200 mb-6">
-                                <GraduationCap size={16} className="text-blue-700" />
-                                <span>Interactive Digital Learning Platform</span>
-                            </div>
-
-                            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight mb-5">
+                            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight mb-3 sm:mb-5">
                                 Empowering Students Through <br className="hidden sm:inline" />
                                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-indigo-600">
                                     Quality Education & Tests
                                 </span>
                             </h1>
 
-                            <p className="text-base sm:text-lg text-slate-600 mb-8 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
-                                वर्गानुसार व विषयवार शैक्षणिक व्हिडिओ, सराव प्रश्नपत्रिका आणि स्पर्धा परीक्षा मार्गदर्शन. 
-                                Master <strong>Maths, English, Marathi, and Intelligence</strong> with structured video lessons and practice papers.
+                            <p className="text-sm sm:text-lg text-slate-600 mb-5 sm:mb-8 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
+                                <span className="font-medium">वर्गानुसार व विषयवार शैक्षणिक व्हिडिओ, सराव प्रश्नपत्रिका आणि स्पर्धा परीक्षा मार्गदर्शन.</span>
+                                <span className="hidden sm:inline"> Master <strong>Maths, English, Marathi, and Intelligence</strong> with structured video lessons and practice papers.</span>
                             </p>
 
                             {/* Prominent Google Sign-In Card */}
-                            <div className="bg-white p-6 rounded-2xl shadow-xl shadow-slate-200/70 border border-slate-200 max-w-md mx-auto lg:mx-0 text-center relative overflow-hidden">
+                            <div className="bg-white p-4.5 sm:p-6 rounded-2xl shadow-xl shadow-slate-200/70 border border-slate-200 max-w-md mx-auto lg:mx-0 text-center relative overflow-hidden">
                                 <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-emerald-500 to-highlight" />
                                 
-                                <div className="flex items-center justify-center gap-2 mb-1.5 text-slate-900 font-bold text-lg">
-                                    <Sparkles size={18} className="text-highlight" />
+                                <div className="flex items-center justify-center gap-2 mb-1 text-slate-900 font-bold text-base sm:text-lg">
+                                    <Sparkles size={16} className="text-highlight shrink-0" />
                                     <span>Sign In to Start Learning</span>
                                 </div>
-                                <p className="text-xs sm:text-sm text-slate-500 mb-5">
+                                <p className="text-xs sm:text-sm text-slate-500 mb-4 sm:mb-5">
                                     Access class-wise lessons and practice test papers with your Google account.
                                 </p>
 
@@ -183,7 +178,7 @@ const Landing = () => {
                                     </div>
                                 )}
 
-                                <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-center gap-4 text-xs font-medium text-slate-500">
+                                <div className="mt-4 pt-3 sm:mt-5 sm:pt-4 border-t border-slate-100 flex items-center justify-center gap-4 text-[11px] sm:text-xs font-medium text-slate-500">
                                     <span className="flex items-center gap-1">
                                         <ShieldCheck size={14} className="text-emerald-600" /> Secure Google Login
                                     </span>
@@ -194,9 +189,9 @@ const Landing = () => {
                             </div>
                         </div>
 
-                        {/* Right Column: Authentic Subject Cards Showcase */}
+                        {/* Right Column: Authentic Subject Cards Showcase (Shown on desktop/tablet, hidden on crowded mobile screens) */}
                         <div className="lg:col-span-5 space-y-4">
-                            <div className="bg-white rounded-2xl p-6 shadow-lg border border-slate-200">
+                            <div className="hidden lg:block bg-white rounded-2xl p-6 shadow-lg border border-slate-200">
                                 <div className="flex items-center justify-between pb-4 border-b border-slate-100">
                                     <div className="flex items-center gap-2.5">
                                         <img src={siteLogo} alt="A to Z Education logo" className="h-9 w-9 object-contain" />
@@ -243,21 +238,21 @@ const Landing = () => {
                             </div>
 
                             {/* Direct WhatsApp Community Card */}
-                            <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-200 flex items-center justify-between gap-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-                                        <MessageCircle size={22} />
+                            <div className="bg-emerald-50 rounded-2xl p-3.5 sm:p-4 border border-emerald-200 flex items-center justify-between gap-3 shadow-xs">
+                                <div className="flex items-center gap-2.5 sm:gap-3">
+                                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                                        <MessageCircle size={20} />
                                     </div>
                                     <div>
                                         <p className="font-bold text-slate-900 text-xs sm:text-sm">Class WhatsApp Group</p>
-                                        <p className="text-[11px] text-slate-600">नियमित class आणि updates साठी ग्रुप लिंक</p>
+                                        <p className="text-[11px] text-slate-600">नियमित class आणि updates साठी लिंक</p>
                                     </div>
                                 </div>
                                 <a
                                     href="https://chat.whatsapp.com/FtFd5b0qGs3DHKu5xvtUHH?mode=ac_t"
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 shrink-0 shadow-xs transition"
+                                    className="px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 shrink-0 shadow-xs transition"
                                 >
                                     Join <ExternalLink size={12} />
                                 </a>
