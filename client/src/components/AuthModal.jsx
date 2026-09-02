@@ -252,45 +252,13 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login', initialCredential = 
 
                     {step === 'initial' ? (
                         <>
-                            {/* Mode Switcher */}
-                            <div className="flex w-full rounded-xl bg-slate-100 p-1 mb-5">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setActiveTab('login');
-                                        setAuthError('');
-                                    }}
-                                    className={`flex-1 py-2 text-xs sm:text-sm font-bold rounded-lg transition-all ${
-                                        activeTab === 'login'
-                                            ? 'bg-white text-blue-700 shadow-sm'
-                                            : 'text-slate-600 hover:text-slate-900'
-                                    }`}
-                                >
-                                    Login
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setActiveTab('register');
-                                        setAuthError('');
-                                    }}
-                                    className={`flex-1 py-2 text-xs sm:text-sm font-bold rounded-lg transition-all ${
-                                        activeTab === 'register'
-                                            ? 'bg-white text-blue-700 shadow-sm'
-                                            : 'text-slate-600 hover:text-slate-900'
-                                    }`}
-                                >
-                                    Register
-                                </button>
-                            </div>
-
                             <p className="text-gray-600 text-center mb-6 text-sm">
                                 {activeTab === 'login' 
                                     ? 'Login to access your courses and track progress.' 
                                     : 'Join thousands of students achieving their goals.'}
                             </p>
 
-                            {/* Soft Blue Notice Box for Auth Error with Clickable Register Link */}
+                            {/* Single Clean Soft Blue Notice Box with Clickable Register Link */}
                             {authError && (
                                 <div className="w-full mb-5 p-3.5 bg-blue-50/90 border border-blue-200 rounded-xl flex items-start gap-2.5 text-left text-xs sm:text-sm text-blue-900 shadow-xs animate-in fade-in duration-150">
                                     <AlertCircle size={18} className="text-blue-600 shrink-0 mt-0.5" />
@@ -305,7 +273,7 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login', initialCredential = 
                                                 }}
                                                 className="ml-1 inline-flex items-center gap-1 font-bold text-blue-700 hover:text-blue-900 underline cursor-pointer hover:scale-105 transition-transform"
                                             >
-                                                Click here to Register →
+                                                Register here →
                                             </button>
                                         )}
                                     </div>
@@ -413,9 +381,6 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login', initialCredential = 
                     )}
 
                     <div className="w-full border-t border-gray-100 pt-6 text-center mt-4">
-                        {step === 'initial' && authError && (
-                            <p className="text-sm text-red-600 mb-3">{authError}</p>
-                        )}
                         <p className="text-sm text-gray-500">
                             By continuing, you agree to our{' '}
                             <a href="#" className="text-primary hover:underline">Terms of Service</a>
