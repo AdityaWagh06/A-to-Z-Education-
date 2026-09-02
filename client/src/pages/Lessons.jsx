@@ -1,7 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
-import ReactPlayer from 'react-player';
+import ReactPlayerModule from 'react-player';
+
+const ReactPlayer = typeof ReactPlayerModule === 'function'
+  ? ReactPlayerModule
+  : (ReactPlayerModule && typeof ReactPlayerModule.default === 'function'
+      ? ReactPlayerModule.default
+      : ReactPlayerModule);
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
