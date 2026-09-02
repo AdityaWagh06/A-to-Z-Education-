@@ -52,13 +52,13 @@ const Navbar = () => {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center min-h-16 py-2 gap-2 sm:gap-4">
                         <div className="flex items-center min-w-0">
-                            <Link to="/" className="flex items-center gap-2 text-primary min-w-0">
-                                <img src={SITE_LOGO_URL} alt="A to Z Education logo" className="h-12 w-12 sm:h-14 sm:w-14 object-contain" />
-                                <span className="font-extrabold text-xs leading-tight tracking-tight sm:text-xl max-w-[106px] sm:max-w-none">A to Z Education</span>
+                            <Link to="/" className="flex items-center gap-1.5 sm:gap-2 text-primary min-w-0">
+                                <img src={SITE_LOGO_URL} alt="A to Z Education logo" className="h-10 w-10 sm:h-14 sm:w-14 object-contain shrink-0" />
+                                <span className="font-extrabold text-sm sm:text-xl truncate text-slate-900">A to Z Education</span>
                             </Link>
                         </div>
                         
-                        <div className="flex items-center gap-2 sm:gap-6 flex-wrap justify-end">
+                        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
                             {user?.role === 'student' && (
                                 <div className="hidden md:flex items-center gap-6">
                                     <Link to="/student/home" className="text-gray-600 hover:text-primary font-medium flex items-center gap-1 transition-colors">
@@ -183,22 +183,22 @@ const Navbar = () => {
                                     )}
                                 </div>
                             ) : (
-                                <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                                <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
                                     <Link
                                         to="/about"
-                                        className="px-3 sm:px-4 py-2 rounded-md font-semibold text-gray-700 border border-gray-300 hover:bg-gray-50 transition flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base whitespace-nowrap"
+                                        className="hidden sm:flex px-3 sm:px-4 py-2 rounded-md font-semibold text-gray-700 border border-gray-300 hover:bg-gray-50 transition items-center gap-1.5 sm:gap-2 text-sm sm:text-base whitespace-nowrap"
                                     >
                                         <Info size={16} /> <span>About</span>
                                     </Link>
                                     <button 
                                         onClick={openRegister}
-                                        className="px-3 sm:px-6 py-2 rounded-md font-bold bg-primary text-white hover:bg-opacity-90 transition shadow-md hover:shadow-lg text-sm sm:text-base whitespace-nowrap"
+                                        className="px-2.5 sm:px-6 py-1.5 sm:py-2 rounded-md font-bold bg-primary text-white hover:bg-opacity-90 transition shadow-xs text-xs sm:text-base whitespace-nowrap"
                                     >
                                         Register
                                     </button>
                                     <button 
                                         onClick={openLogin}
-                                        className="px-3 sm:px-6 py-2 rounded-md font-bold text-primary border border-primary hover:bg-primary/5 transition text-sm sm:text-base whitespace-nowrap"
+                                        className="px-2.5 sm:px-6 py-1.5 sm:py-2 rounded-md font-bold text-primary border border-primary hover:bg-primary/5 transition text-xs sm:text-base whitespace-nowrap"
                                     >
                                         Login
                                     </button>

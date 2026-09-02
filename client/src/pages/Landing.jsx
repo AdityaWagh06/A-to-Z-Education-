@@ -110,29 +110,27 @@ const Landing = () => {
     return (
         <div className="min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-primary selection:text-white">
             {/* Hero Section */}
-            <header className="relative overflow-hidden pt-6 pb-12 sm:pt-16 sm:pb-20 bg-gradient-to-b from-indigo-50/60 via-white to-slate-50 border-b border-slate-200/80">
+            <header className="relative overflow-hidden pt-8 sm:pt-14 pb-12 sm:pb-20 bg-gradient-to-b from-indigo-50/60 via-white to-slate-50 border-b border-slate-200/80">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-10 lg:gap-12 items-center">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 sm:gap-10 lg:gap-12 items-center">
                         {/* Left Column: Platform Headline & Google Sign-In */}
                         <div className="lg:col-span-7 text-center lg:text-left">
-                            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight mb-3 sm:mb-5">
+                            <h1 className="mt-2 sm:mt-4 text-2xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight mb-4 sm:mb-6">
                                 Empowering Students Through <br className="hidden sm:inline" />
                                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-indigo-600">
                                     Quality Education & Tests
                                 </span>
                             </h1>
 
-                            <p className="text-sm sm:text-lg text-slate-600 mb-5 sm:mb-8 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
+                            <p className="text-sm sm:text-lg text-slate-600 mb-6 sm:mb-8 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
                                 <span className="font-medium">वर्गानुसार व विषयवार शैक्षणिक व्हिडिओ, सराव प्रश्नपत्रिका आणि स्पर्धा परीक्षा मार्गदर्शन.</span>
                                 <span className="hidden sm:inline"> Master <strong>Maths, English, Marathi, and Intelligence</strong> with structured video lessons and practice papers.</span>
                             </p>
 
-                            {/* Prominent Google Sign-In Card */}
-                            <div className="bg-white p-4.5 sm:p-6 rounded-2xl shadow-xl shadow-slate-200/70 border border-slate-200 max-w-md mx-auto lg:mx-0 text-center relative overflow-hidden">
-                                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-emerald-500 to-highlight" />
-                                
-                                <div className="flex items-center justify-center gap-2 mb-1 text-slate-900 font-bold text-base sm:text-lg">
-                                    <Sparkles size={16} className="text-highlight shrink-0" />
+                            {/* Prominent Google Sign-In Section (Rendered naturally without boxed card container) */}
+                            <div className="max-w-md mx-auto lg:mx-0 text-center lg:text-left py-2">
+                                <div className="flex items-center justify-center lg:justify-start gap-2 mb-1.5 text-slate-900 font-bold text-base sm:text-lg">
+                                    <Sparkles size={18} className="text-highlight shrink-0" />
                                     <span>Sign In to Start Learning</span>
                                 </div>
                                 <p className="text-xs sm:text-sm text-slate-500 mb-4 sm:mb-5">
@@ -140,12 +138,12 @@ const Landing = () => {
                                 </p>
 
                                 {isLoggingIn ? (
-                                    <div className="py-4 flex flex-col items-center justify-center gap-2.5">
+                                    <div className="py-4 flex flex-col items-center lg:items-start justify-center gap-2.5">
                                         <div className="w-8 h-8 rounded-full border-3 border-indigo-200 border-t-primary animate-spin" />
                                         <p className="text-xs sm:text-sm font-bold text-slate-800">{loginStatusText}</p>
                                     </div>
                                 ) : (
-                                    <div className="flex justify-center items-center py-1">
+                                    <div className="flex justify-center lg:justify-start items-center py-1">
                                         <GoogleLogin
                                             onSuccess={handleGoogleSuccess}
                                             onError={() => setMessage(getGenericErrorMessage())}
@@ -178,7 +176,7 @@ const Landing = () => {
                                     </div>
                                 )}
 
-                                <div className="mt-4 pt-3 sm:mt-5 sm:pt-4 border-t border-slate-100 flex items-center justify-center gap-4 text-[11px] sm:text-xs font-medium text-slate-500">
+                                <div className="mt-5 flex items-center justify-center lg:justify-start gap-4 text-xs font-medium text-slate-500">
                                     <span className="flex items-center gap-1">
                                         <ShieldCheck size={14} className="text-emerald-600" /> Secure Google Login
                                     </span>
