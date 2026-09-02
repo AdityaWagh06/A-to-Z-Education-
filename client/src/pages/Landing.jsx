@@ -110,12 +110,12 @@ const Landing = () => {
     return (
         <div className="min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-primary selection:text-white">
             {/* Hero Section */}
-            <header className="relative overflow-hidden pt-8 sm:pt-14 pb-12 sm:pb-20 bg-gradient-to-b from-indigo-50/60 via-white to-slate-50 border-b border-slate-200/80">
+            <header className="relative overflow-hidden pt-14 sm:pt-14 pb-12 sm:pb-20 bg-gradient-to-b from-indigo-50/60 via-white to-slate-50 border-b border-slate-200/80">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 sm:gap-10 lg:gap-12 items-center">
                         {/* Left Column: Platform Headline & Google Sign-In */}
                         <div className="lg:col-span-7 text-center lg:text-left">
-                            <h1 className="mt-2 sm:mt-4 text-2xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight mb-4 sm:mb-6">
+                            <h1 className="mt-4 sm:mt-4 text-2xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight mb-4 sm:mb-6">
                                 Empowering Students Through <br className="hidden sm:inline" />
                                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-indigo-600">
                                     Quality Education & Tests
