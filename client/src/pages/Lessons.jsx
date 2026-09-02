@@ -1,20 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
-import ReactPlayerModule from 'react-player';
-
-const ReactPlayer = typeof ReactPlayerModule === 'function'
-  ? ReactPlayerModule
-  : (ReactPlayerModule && typeof ReactPlayerModule.default === 'function'
-      ? ReactPlayerModule.default
-      : ReactPlayerModule);
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const getYouTubeID = (url) => {
     if (!url) return null;
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-    const match = url.match(regExp);
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|shorts\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = String(url).match(regExp);
     return (match && match[2].length === 11) ? match[2] : null;
 };
 
@@ -144,27 +137,19 @@ const Lessons = () => {
                     <div className="max-w-4xl mx-auto"> {/* Adjusted for better fit */}
                         {/* Aspect Ratio Wrapper (16:9) */}
                         <div className="relative w-full pt-[56.25%] rounded-xl overflow-hidden shadow-2xl bg-black border border-gray-800 ring-4 ring-gray-200/50 group">
-                            {/* Overlay for branding protection */}
-                            <div className="absolute top-0 left-0 w-full h-16 z-20 bg-transparent pointer-events-none"></div>
-
-                            <ReactPlayer 
-                                url={activeVideo.youtubeUrl} 
-                                className="absolute top-0 left-0"
-                                width="100%" 
-                                height="100%"
-                                controls={true}
-                                config={{
-                                    youtube: {
-                                        playerVars: { 
-                                            rel: 0, 
-                                            modestbranding: 1
-                                        }
-                                    }
-                                }}
-                                onEnded={() => {
-                                    // Optional: Auto-advance
-                                }}
-                            />
+                            {getYouTubeID(activeVideo.youtubeUrl) ? (
+                                <iframe
+                                    src={`https://www.youtube.com/embed/${getYouTubeID(activeVideo.youtubeUrl)}?autoplay=1&rel=0`}
+                                    title={activeVideo.title}
+                                    className="absolute top-0 left-0 w-full h-full border-0"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                    allowFullScreen
+                                ></iframe>
+                            ) : (
+                                <div className="absolute inset-0 flex items-center justify-center text-white text-sm font-semibold">
+                                    Video player unavailable for this lesson.
+                                </div>
+                            )}
                         </div>
                         <div className="mt-4 sm:mt-6 bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-200">
                             <h1 className="text-xl sm:text-2xl font-bold text-gray-800">{activeVideo.title}</h1>
