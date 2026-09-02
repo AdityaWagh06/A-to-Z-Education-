@@ -138,8 +138,8 @@ const Lessons = () => {
                     <div className="max-w-4xl mx-auto"> {/* Adjusted for better fit */}
                         {/* Aspect Ratio Wrapper (16:9) */}
                         <div className="relative w-full pt-[56.25%] rounded-xl overflow-hidden shadow-2xl bg-black border border-gray-800 ring-4 ring-gray-200/50 group">
-                            {/* Overlay to block YouTube title interaction */}
-                            <div className="absolute top-0 left-0 w-full h-16 z-20 bg-transparent cursor-default"></div>
+                            {/* Overlay for branding protection */}
+                            <div className="absolute top-0 left-0 w-full h-16 z-20 bg-transparent pointer-events-none"></div>
 
                             <ReactPlayer 
                                 url={activeVideo.youtubeUrl} 
@@ -150,16 +150,13 @@ const Lessons = () => {
                                 config={{
                                     youtube: {
                                         playerVars: { 
-                                            showinfo: 0, 
                                             rel: 0, 
-                                            modestbranding: 1,
-                                            origin: window.location.origin
+                                            modestbranding: 1
                                         }
                                     }
                                 }}
                                 onEnded={() => {
-                                    // Optional: Auto-advance (uncomment if desired by user, otherwise manual 'Next Lesson' works)
-                                    // handleNextLesson();
+                                    // Optional: Auto-advance
                                 }}
                             />
                         </div>

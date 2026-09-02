@@ -7,14 +7,25 @@ const getVideos = async (req, res) => {
     const { standard, subject } = req.query;
     try {
         const supabase = getSupabaseAdmin();
-        // Changed ordering to ascending so the first inserted video remains first (Playlist order)
         let query = supabase.from('videos').select('*').order('created_at', { ascending: true });
 
         if (standard) query = query.eq('standard', Number(standard));
         if (subject) query = query.ilike('subject', subject);
 
-        const { data, error } = await query;
+        let { data, error } = await query;
         if (error) throw error;
+
+        if ((!data || data.length === 0) && standard && subject) {
+            const fallbackQuery = supabase
+                .from('videos')
+                .select('*')
+                .ilike('subject', subject)
+                .order('created_at', { ascending: true });
+            const fallbackRes = await fallbackQuery;
+            if (!fallbackRes.error && fallbackRes.data && fallbackRes.data.length > 0) {
+                data = fallbackRes.data;
+            }
+        }
 
         return res.json((data || []).map((v) => ({
             _id: v.id,
